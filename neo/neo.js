@@ -26,11 +26,12 @@ window.renderTopbar = function (sub, extra = '') {
     </a>
     <span class="muted" style="font-size:12px">${sub ? '· ' + esc(sub) : ''}</span>
     <span class="spacer"></span>
+    ${PAGE === 'entry' ? '' : `
     <nav class="neo-nav">
       <a href="index.html" data-p="entry">入口</a>
       <a href="diagnose.html?stage=result" data-p="diagnose">剧本诊断优化</a>
       <a href="batch.html?stage=result" data-p="batch">批量审稿筛选</a>
-    </nav>
+    </nav>`}
     ${extra}
     <button class="btn btn-ghost btn-sm" id="cmdBtn" type="button" title="命令面板">⌘ <span class="kbd">K</span></button>
     <span class="credits" title="Demo 数据">积分 <b>${fmt(CREDITS)}</b></span>
