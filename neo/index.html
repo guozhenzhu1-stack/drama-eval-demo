@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>剧本评估 · 剧本智能评审 Neo</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/eval.css">
+<link rel="stylesheet" href="neo.css">
+</head>
+<body data-page="entry">
+<header id="topbar"></header>
+
+<main class="entry">
+  <div class="entry-hero">
+    <div class="neo-kicker"><i class="pulse"></i> 八大维度 · 逐场定位 · 判断依据可追溯</div>
+    <h1>把资深编辑脑子里的判读，变成可定位、可执行的评估</h1>
+    <p>上传剧本，逐场找问题 · 一键改剧本 · 海量初筛</p>
+  </div>
+
+  <div class="mode-tabs" role="tablist" aria-label="评估模式">
+    <div class="mode-tab" role="tab" aria-selected="true" data-mode="diagnose" tabindex="0">
+      <div class="mt-title">剧本诊断优化 <span class="tag">C 端 · 个人编剧</span></div>
+      <div class="mt-sub">逐场找问题 · 一键改剧本</div>
+      <span class="mt-go">→</span>
+    </div>
+    <div class="mode-tab" role="tab" aria-selected="false" data-mode="batch" tabindex="0">
+      <div class="mt-title">批量审稿筛选 <span class="tag">B 端 · 收稿机构</span></div>
+      <div class="mt-sub">海量初筛 · 自定义审稿标准</div>
+      <span class="mt-go">→</span>
+    </div>
+  </div>
+
+  <div class="card composer-card composer-uni" id="uniBox">
+    <div class="uni-top">
+      <span class="uni-ico">✎</span>
+      <textarea id="reqInput" rows="3"></textarea>
+    </div>
+    <input type="file" id="filePicker" multiple hidden
+           accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,text/plain">
+    <div class="file-list" id="fileList"></div>
+    <div class="uni-attach">
+      <button type="button" class="attach-btn" id="dropzone">
+        <span class="dz-icon">⇪</span>
+        <span class="dz-main">添加剧本文件</span>
+        <span class="dz-hint" id="dzHint"></span>
+      </button>
+    </div>
+    <div class="composer-foot">
+      <button class="btn btn-sm" id="loadSample">载入示例</button>
+      <span class="hint-inline" id="fileStat"></span>
+      <span class="spacer"></span>
+      <span class="cost" id="costHint"></span>
+      <button class="btn btn-primary btn-lg" id="startBtn">发起评估</button>
+    </div>
+  </div>
+
+  <div class="records">
+    <div class="records-head">
+      <h2>评估记录</h2>
+      <span class="spacer"></span>
+      <div class="chip-row" id="recFilter">
+        <button type="button" class="chip" aria-pressed="true" data-v="all">全部</button>
+        <button type="button" class="chip" aria-pressed="false" data-v="diagnose">剧本诊断优化</button>
+        <button type="button" class="chip" aria-pressed="false" data-v="batch">批量审稿筛选</button>
+      </div>
+    </div>
+    <div class="card"><div id="recList"></div></div>
+  </div>
+</main>
+
+<script src="../js/mock.js"></script>
+<script src="../js/ui.js"></script>
+<script src="neo.js"></script>
+<script src="../js/entry.js"></script>
+</body>
+</html>

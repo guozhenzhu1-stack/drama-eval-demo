@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>剧本诊断优化 · 剧本智能评审</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/eval.css">
+</head>
+<body>
+<header id="topbar"></header>
+
+<div class="studio">
+  <!-- 左：对话（常驻） -->
+  <aside class="pane pane-chat" id="paneChat">
+    <div class="pane-head">
+      <h3>剧本诊断优化</h3>
+      <span class="tag">C 端 · 个人编剧</span>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="index.html" title="返回入口">↩</a>
+    </div>
+    <div class="pane-body"><div class="chat-scroll" id="chatScroll"></div></div>
+    <div class="composer">
+      <div id="quoteRef"></div>
+      <textarea id="chatInput" rows="2" placeholder="继续提问，或在右侧正文中划选一段再下指令…"></textarea>
+      <div class="composer-bar">
+        <span class="hint-inline" id="chatHint"></span>
+        <span class="spacer"></span>
+        <button class="btn btn-primary btn-sm" id="sendBtn" type="button">发送 ⏎</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" title="拖拽调整宽度，双击复位"></div>
+
+  <!-- 右：工作台 -->
+  <main class="pane pane-work">
+    <div class="pane-head">
+      <div class="wtabs" role="tablist" aria-label="工作台" id="wtabs">
+        <button class="wtab" role="tab" aria-selected="true" data-panel="panelReport">评估报告</button>
+        <button class="wtab" role="tab" aria-selected="false" data-panel="panelAnnot">
+          分集问题标注 <span class="cnt" id="tabIssueCnt">18</span></button>
+        <button class="wtab" role="tab" aria-selected="false" data-panel="panelDiff" id="tabDiff" hidden>
+          修改对比 <span class="cnt" id="tabDiffCnt">0</span></button>
+      </div>
+      <span class="spacer"></span>
+      <span class="hint-inline" id="workMeta"></span>
+    </div>
+    <div class="pane-body" id="workBody" style="display:flex;flex-direction:column">
+      <div class="work-panel active" id="panelReport"></div>
+      <div class="work-panel" id="panelAnnot"></div>
+      <div class="work-panel" id="panelDiff"></div>
+    </div>
+  </main>
+</div>
+
+<script src="js/mock.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/report.js"></script>
+<script src="js/annot.js"></script>
+<script src="js/diffview.js"></script>
+<script src="js/diagnose.js"></script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>批量审稿筛选 · 剧本智能评审</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/eval.css">
+</head>
+<body>
+<header id="topbar"></header>
+
+<div class="studio">
+  <aside class="pane pane-chat" id="paneChat">
+    <div class="pane-head">
+      <h3>批量审稿筛选</h3>
+      <span class="tag">B 端 · 收稿机构</span>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="index.html" title="返回入口">↩</a>
+    </div>
+    <div class="pane-body"><div class="chat-scroll" id="chatScroll"></div></div>
+    <div class="composer">
+      <textarea id="chatInput" rows="2" placeholder="继续追问，例如：只看 S/A 级 / 为什么拦了《我在古代开外卖》"></textarea>
+      <div class="composer-bar">
+        <span class="hint-inline" id="chatHint"></span>
+        <span class="spacer"></span>
+        <button class="btn btn-primary btn-sm" id="sendBtn" type="button">发送 ⏎</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" title="拖拽调整宽度，双击复位"></div>
+
+  <main class="pane pane-work">
+    <div class="pane-head">
+      <div class="wtabs" role="tablist" aria-label="工作台" id="wtabs">
+        <button class="wtab" role="tab" aria-selected="true" data-panel="panelBatch">
+          批量评估结果 <span class="cnt" id="tabBatchCnt">50</span></button>
+        <button class="wtab" role="tab" aria-selected="false" data-panel="panelReport">剧本评估报告</button>
+        <button class="wtab" role="tab" aria-selected="false" data-panel="panelAnnot">分集问题标注</button>
+      </div>
+      <span class="spacer"></span>
+      <span class="hint-inline" id="workMeta"></span>
+    </div>
+    <div class="pane-body" id="workBody" style="display:flex;flex-direction:column">
+      <div class="work-panel active" id="panelBatch"></div>
+      <div class="work-panel" id="panelReport">
+        <div class="annot-bar">
+          <span class="lb">选择剧本</span>
+          <select id="repPick"></select>
+          <span class="spacer"></span>
+          <span class="hint-inline">Demo 中各剧本的报告明细复用同一份示例数据</span>
+        </div>
+        <div id="repHost" style="flex:1;min-height:0;overflow:auto"></div>
+      </div>
+      <div class="work-panel" id="panelAnnot">
+        <div class="annot-bar">
+          <span class="lb">选择剧本</span>
+          <select id="annotPick"></select>
+          <span class="spacer"></span>
+          <span class="hint-inline">B 端只读标注：给出问题与判断依据，不做 AI 改写</span>
+        </div>
+        <div id="annotHost" style="flex:1;min-height:0;display:flex"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/mock.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/report.js"></script>
+<script src="js/annot.js"></script>
+<script src="js/batch.js"></script>
+</body>
+</html>
