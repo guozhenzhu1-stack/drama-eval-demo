@@ -15,7 +15,7 @@ const flush = el => void el.offsetWidth;
 const THEME_KEY = 'neo-theme';
 document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) || 'light';
 
-/* ---------- 顶栏：胶囊导航 + ⌘K + 积分 ---------- */
+/* ---------- 顶栏：⌘K + 积分（页面导航走 ⌘K 与内页 ↩ 按钮） ---------- */
 window.renderTopbar = function (sub, extra = '') {
   const host = document.querySelector('#topbar');
   if (!host) return;
@@ -26,18 +26,10 @@ window.renderTopbar = function (sub, extra = '') {
     </a>
     <span class="muted" style="font-size:12px">${sub ? '· ' + esc(sub) : ''}</span>
     <span class="spacer"></span>
-    ${PAGE === 'entry' ? '' : `
-    <nav class="neo-nav">
-      <a href="index.html" data-p="entry">入口</a>
-      <a href="diagnose.html?stage=result" data-p="diagnose">剧本诊断优化</a>
-      <a href="batch.html?stage=result" data-p="batch">批量审稿筛选</a>
-    </nav>`}
     ${extra}
     <button class="btn btn-ghost btn-sm" id="cmdBtn" type="button" title="命令面板">⌘ <span class="kbd">K</span></button>
     <span class="credits" title="Demo 数据">积分 <b>${fmt(CREDITS)}</b></span>
     <button class="btn btn-ghost btn-sm" id="themeBtn" type="button" title="切换深浅色">◐</button>`;
-  const on = host.querySelector(`.neo-nav a[data-p="${PAGE}"]`);
-  if (on) on.classList.add('on');
   host.querySelector('#themeBtn').onclick = () => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
