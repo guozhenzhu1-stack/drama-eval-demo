@@ -3,24 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>评估报告 · 剧本智能评审 Neo</title>
-<link rel="stylesheet" href="../css/tokens.css">
-<link rel="stylesheet" href="../css/base.css">
-<link rel="stylesheet" href="../css/eval.css">
-<link rel="stylesheet" href="neo.css">
+<title>评估报告 · 正在跳转 · 剧本智能评审 Neo</title>
+<!-- v4 的独立报告页已并入统一的评估结果页（result.html），旧链接原样带参跳转过去 -->
+<script>
+(function () {
+  var p = new URLSearchParams(location.search);
+  if (!p.get('tab')) p.set('tab', 'report');
+  if (!p.get('from')) p.set('from', 'diagnose');
+  location.replace('result.html?' + p.toString());
+})();
+</script>
 </head>
-<body data-page="report">
-<header id="topbar"></header>
-
-<main class="doc-solo">
-  <div id="repHost"></div>
-</main>
-
-<script src="../js/mock.js"></script>
-<script src="../js/ui.js"></script>
-<script src="neo.js"></script>
-<script src="../js/report.js"></script>
-<script src="report-neo.js"></script>
-<script src="report-page.js"></script>
+<body>
+<p style="margin:48px;font:14px/1.7 -apple-system,'PingFang SC',sans-serif">
+  评估报告已并入统一的评估结果页，正在跳转…
+  <a href="result.html?tab=report&amp;from=diagnose">点这里直接打开</a>
+</p>
 </body>
 </html>

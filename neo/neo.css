@@ -424,7 +424,8 @@ select option { background: #fff; color: #0b1020; }
 .studio.solo .composer { padding-left: 0; padding-right: 0; }
 .studio.solo .pane-head { justify-content: flex-start; }
 .studio.solo .pane-head::after {
-  content: '澄清评估口径 · 确认后自动展开右侧结果区'; font-size: 11.5px; color: var(--text-muted);
+  content: '评估结果都在新页面打开：完成后对话里会给出结果文档入口';
+  font-size: 11.5px; color: var(--text-muted);
   margin-left: auto;
 }
 .studio.splitting > .pane-work { animation: paneIn .55s cubic-bezier(.2, .8, .2, 1) both; }
@@ -1222,6 +1223,64 @@ ins.dv { background: rgba(16, 185, 129, .16); color: #06795a; text-decoration: n
 /* B 端「评估报告文档」tab：面板里只放文档入口，给出版心与留白 */
 #repHost > .doc-out { padding: var(--sp-4) var(--sp-4) 0; }
 
+/* 一次产出多份结果文档：竖排卡片 + 份数角标 */
+.doc-files { display: flex; flex-direction: column; gap: 9px; }
+.doc-out-t .dc-n {
+  font-style: normal; padding: 1px 7px; border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 600; color: var(--accent);
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+
+/* 对话答案里的「在结果页查看」跳转按钮 */
+.res-jump {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 9px;
+  padding: 5px 12px; border-radius: var(--r-pill); cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--accent); background: var(--surface-2); border: 1px solid var(--border);
+  transition: .16s;
+}
+.res-jump:hover { color: var(--on-accent); background: var(--grad); border-color: transparent; }
+.res-jump i { font-style: normal; }
+
 /* 独立文档页：无对话区，整页只放报告正文 */
 .doc-solo { min-height: calc(100vh - var(--topbar-h)); padding-bottom: var(--sp-7); }
 .doc-solo .rep-doc { padding-top: var(--sp-5); }
+
+/* ================= 评估结果页（neo/result.html）：整页只放结果 ================= */
+.res-shell {
+  height: calc(100vh - var(--topbar-h));
+  display: flex; flex-direction: column; min-height: 0;
+}
+.res-head {
+  flex: none; display: flex; align-items: center; gap: var(--sp-3);
+  padding: 0 var(--sp-5); border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+.res-head .wtabs { border-bottom: 0; }
+.res-body { flex: 1 1 auto; min-height: 0; }
+.res-body > .work-panel { height: 100%; }
+
+/* B 端结果页的「选择剧本」条 */
+.res-pick {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  padding: 9px var(--sp-4); border-bottom: 1px solid var(--border);
+  background: var(--surface-1); font-size: 12.5px;
+}
+.res-pick .lb { font-weight: 650; color: var(--text-secondary); }
+.res-pick select { max-width: 340px; }
+
+/* 修改对比上方的改动小结（结果页没有对话区，小结落在这里） */
+#fixNote:empty { display: none; }
+.fix-note {
+  flex: none; display: flex; gap: 10px; margin: var(--sp-4) var(--sp-4) 0;
+  padding: 12px 14px; border-radius: var(--r-md);
+  border: 1px solid var(--border); background: var(--surface-1);
+  font-size: 13px; line-height: 1.8;
+}
+.fix-note .fn-ico {
+  flex: none; width: 24px; height: 24px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--grad); color: var(--on-accent); font-size: 13px;
+}
+.fix-note ul { margin: 6px 0 0; padding-left: 18px; }
+.fix-note li { margin-bottom: 3px; }
+.fix-note .muted { color: var(--text-muted); }

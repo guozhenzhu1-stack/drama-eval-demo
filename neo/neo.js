@@ -176,23 +176,28 @@ function gauge(root) {
 }
 
 /* ---------- 工作台 tab 滑动指示器 ---------- */
+/* 结果页的 tab 会随产出增减而重建，故可重复调用：指示器节点复用，观察者只装一次 */
 function tabIndicator() {
   const host = document.querySelector('#wtabs');
   if (!host) return;
+  if (host.__neoMove) { host.appendChild(host.__neoInd); host.__neoMove(); return; }
   const ind = document.createElement('i');
   ind.className = 'neo-ind';
   host.appendChild(ind);
+  host.__neoInd = ind;
   const move = () => {
     const on = host.querySelector('[role=tab][aria-selected="true"]');
     if (!on || on.hidden) { ind.style.width = '0'; return; }
     ind.style.width = on.offsetWidth + 'px';
     ind.style.transform = `translateX(${on.offsetLeft - 3}px)`;
   };
+  host.__neoMove = move;
   new MutationObserver(move).observe(host, { attributes: true, subtree: true, attributeFilter: ['aria-selected', 'hidden'] });
   addEventListener('resize', move);
   setTimeout(move, 0);
   setTimeout(move, 400);
 }
+window.neoTabIndicator = tabIndicator;
 
 /* ---------- 对话：AI 气泡流式揭示 ---------- */
 function chatStream() {
@@ -230,7 +235,7 @@ const ask = t => {
   inp.value = t;
   document.querySelector('#sendBtn').click();
 };
-const goTab = p => { const h = document.querySelector('#wtabs'); if (h) activateTab(h, p); };
+const goRes = k => openRes(k);
 function actions() {
   const A = [
     { i: '⌂', t: '回到入口', s: 'index.html', run: () => location.href = 'index.html' },
@@ -246,17 +251,16 @@ function actions() {
     { i: '⏱', t: '查看评估记录', s: '按两类分开、最新在前', run: () =>
       document.querySelector('.records').scrollIntoView({ behavior: 'smooth' }) });
   if (PAGE === 'diagnose') A.unshift(
-    { i: '◱', t: '打开评估报告', s: 'Alt+1', run: () => goTab('panelReport') },
-    { i: '◲', t: '打开分集问题标注', s: 'Alt+2', run: () => goTab('panelAnnot') },
-    { i: '◳', t: '打开修改对比', s: 'Alt+3', run: () => goTab('panelDiff') },
+    { i: '◱', t: '打开评估报告', s: '在新页面全屏看', run: () => goRes('report') },
+    { i: '◲', t: '打开分集问题标注', s: '结果页 · 深度评估产物', run: () => goRes('annot') },
     { i: '✦', t: '整本一键修复', s: '按维度批量改写全剧', run: () => ask('整本修复') },
     { i: '◎', t: '问：伏笔回收怎么样', s: '定位到伏笔维度的问题', run: () => ask('伏笔怎么样') },
     { i: '⚠', t: '问：有没有合规风险', s: '规则库判定 + 判断依据', run: () => ask('有没有合规风险') },
     { i: '⤓', t: '导出评估结果', s: 'PDF / Word / Excel', run: () => ask('导出') });
   if (PAGE === 'batch') A.unshift(
-    { i: '◱', t: '打开批量评估结果', s: 'Alt+1', run: () => goTab('panelBatch') },
-    { i: '◲', t: '打开剧本评估报告', s: 'Alt+2', run: () => goTab('panelReport') },
-    { i: '◳', t: '打开分集问题标注', s: 'Alt+3', run: () => goTab('panelAnnot') },
+    { i: '◱', t: '打开批量评估结果', s: '在新页面全屏看', run: () => goRes('batch') },
+    { i: '◲', t: '打开剧本评估报告', s: '结果页 · 当前选中稿件', run: () => goRes('report') },
+    { i: '◳', t: '打开分集问题标注', s: '结果页 · 只读标注', run: () => goRes('annot') },
     { i: '★', t: '只看 S/A 级', s: '筛出头部稿件', run: () => ask('只看 S/A 级') },
     { i: '⛔', t: '只看拦截稿', s: 'AI 拼凑 / 洗稿 / 同质化 / 格式混乱', run: () => ask('只看拦截稿') },
     { i: '✓', t: '问：符合审稿要求的有哪些', s: '按自定义要求收敛', run: () => ask('符合要求的有哪些') },
@@ -407,7 +411,7 @@ function soloChat() {
     if (on && !first) {
       studio.classList.add('splitting');
       setTimeout(() => studio.classList.remove('splitting'), 900);
-      toast('评估完成，已展开右侧结果区');
+      toast('评估完成，结果文档已就绪');
     }
     first = false;
   };
@@ -418,45 +422,111 @@ function soloChat() {
   sync();
 }
 
-/* ---------- 评估结果文档：报告不再内嵌，C 端只在对话框里给一个入口 ---------- */
-let DOC_META = null;
+/* ---------- 评估结果文档：结果都不内嵌，评估页只在对话框里给入口 ---------- */
+let DOC_FILES = null;
 
-/* report-neo.js 渲染时把文档元信息交过来，卡片挂在哪由这里决定 */
-window.neoDocCard = function (meta) {
-  DOC_META = meta;
+/* report-neo.js 渲染时把本次产出的结果文档清单交过来，卡片挂在哪由这里决定 */
+window.neoDocCard = function (files) {
+  if (!files || !files.length) return;
+  DOC_FILES = files;
   const old = document.querySelector('#neoDocChat');
-  if (old) old.outerHTML = window.neoDocCardHtml(meta, 'chat');
+  if (old) old.outerHTML = window.neoDocGroupHtml(files, 'chat');
   else placeDocCard();
 };
 
 /* 挂到「评估完成」那条 AI 消息下方：步骤条与 brief 卡片所在的气泡跳过 */
 function placeDocCard() {
-  if (!DOC_META || document.querySelector('#neoDocChat')) return;
-  if (typeof window.neoDocCardHtml !== 'function') return;
+  if (!DOC_FILES || document.querySelector('#neoDocChat')) return;
+  if (typeof window.neoDocGroupHtml !== 'function') return;
   const bs = document.querySelectorAll('#chatScroll .msg.ai .bubble');
   const b = bs[bs.length - 1];
   if (!b || b.querySelector('.steps') || b.querySelector('#briefCard')) return;
-  b.insertAdjacentHTML('beforeend', window.neoDocCardHtml(DOC_META, 'chat'));
+  b.insertAdjacentHTML('beforeend', window.neoDocGroupHtml(DOC_FILES, 'chat'));
 }
 
-/* 快速评估升级为深度评估后，已经贴出去的文档入口链接也要跟着改 depth */
+/* 快速评估升级为深度评估后，已贴出的入口要改 depth，并补出分集问题标注那一份 */
 function retagDocCard(d) {
-  const fix = s => s.replace(/([?&]depth=)\w+/, '$1' + d);
-  document.querySelectorAll('#neoDocChat .doc-file, #repHost > .doc-out .doc-file')
-    .forEach(a => a.setAttribute('href', fix(a.getAttribute('href'))));
-  if (DOC_META) DOC_META = { ...DOC_META, href: fix(DOC_META.href) };
+  if (!DOC_FILES) return;
+  DOC_FILES = DOC_FILES.map(f => ({ ...f, href: f.href.replace(/([?&]depth=)\w+/, '$1' + d) }));
+  const old = document.querySelector('#neoDocChat');
+  if (old) old.outerHTML = window.neoDocGroupHtml(DOC_FILES, 'chat');
 }
 
-/* C 端工作台去掉「评估报告」tab：报告只走文档入口，工作台留标注与对比 */
-function dropReportTab() {
-  if (PAGE !== 'diagnose') return;
+/* ⌘K / 对话里的「在结果页查看」：复用已贴出的文档入口链接，新窗口打开并登记 */
+function openRes(k) {
+  if (!DOC_FILES || !DOC_FILES.length) {
+    toast('评估完成后会给出结果文档，届时可在新页面查看');
+    return;
+  }
+  if ((k === 'annot' || k === 'diff') && window.NEO_DEPTH === 'quick') {
+    toast('分集问题标注是深度评估的产物，升级后即可查看');
+    return;
+  }
+  /* 修改对比没有独立入口卡片，借任意一份的链接换掉 tab 即可（结果页状态全在 URL 里） */
+  const f = DOC_FILES.find(x => x.k === k) || DOC_FILES[0];
+  openResHref(f.k === k ? f.href : f.href.replace(/([?&]tab=)\w+/, '$1' + k));
+}
+function openResHref(href) {
+  const w = window.open(href, '_blank');
+  if (w) RES_WINS.add(w); else location.href = href;
+}
+
+/* 所有结果都搬到结果页后，评估页右侧工作台不再有内容：整块收掉，对话框全宽 */
+/* v1 的 updateCounters / setDepth 会把某些 tab 重新显示出来，故用观察者持续压住 */
+function hideWorkTabs() {
+  if (PAGE !== 'diagnose' && PAGE !== 'batch') return;
   const host = document.querySelector('#wtabs');
-  const tab = host && host.querySelector('[data-panel="panelReport"]');
-  if (!tab) return;
-  tab.hidden = true;
-  if (tab.getAttribute('aria-selected') !== 'true') return;
-  const first = [...host.querySelectorAll('[role=tab]')].find(x => !x.hidden);
-  if (first) first.click();
+  if (!host) return;
+  const apply = () => host.querySelectorAll('[role=tab]').forEach(t => { if (!t.hidden) t.hidden = true; });
+  apply();
+  new MutationObserver(apply).observe(host, { attributes: true, subtree: true, attributeFilter: ['hidden'] });
+}
+
+/* ---------- 与结果页的桥：共享同一份剧本数据，改动双向可见 ---------- */
+/* SCRIPT / FIXLOG / annot 都是各页脚本里的顶层 const|let，同属全局词法作用域，可裸名读取 */
+const RES_WINS = new Set();
+window.neoStudio = {
+  get script() { return typeof SCRIPT !== 'undefined' ? SCRIPT : null; },
+  get fixlog() { return typeof FIXLOG !== 'undefined' ? FIXLOG : null; },
+  get annot() { try { return typeof annot !== 'undefined' ? annot : null; } catch (e) { return null; } },
+  say(html) { if (typeof say === 'function') say('ai', html); },
+  /* 结果页改完数据后回调：评估页里那份（隐藏的）标注与对比也跟着刷新 */
+  sync() {
+    try { if (typeof annot !== 'undefined' && annot) annot.render(); } catch (e) {}
+    try { if (typeof refreshDiff === 'function') refreshDiff(); } catch (e) {}
+    try { if (typeof updateCounters === 'function') updateCounters(); } catch (e) {}
+  },
+  attach(w) { RES_WINS.add(w); }
+};
+/* 评估页这边改了数据（对话框里说「整本修复」等），让已打开的结果页重绘 */
+function pingResults() {
+  RES_WINS.forEach(w => {
+    try {
+      if (!w || w.closed) { RES_WINS.delete(w); return; }
+      if (typeof w.neoResultRefresh === 'function') w.neoResultRefresh();
+    } catch (e) { RES_WINS.delete(w); }
+  });
+}
+/* 对话区里任何一次交互都可能改到剧本数据，稍后统一 ping 一次（无结果页时是空操作） */
+function pingOnChat() {
+  const chat = document.querySelector('#chatScroll');
+  const box = document.querySelector('.pane-chat') || chat;
+  if (!box) return;
+  const later = () => { if (RES_WINS.size) setTimeout(pingResults, 600); };
+  box.addEventListener('click', later);
+  box.addEventListener('keydown', e => { if (e.key === 'Enter') later(); });
+}
+
+/* 文档卡片自己开的窗口也要登记，这样评估页的改动能推到结果页 */
+function trackDocLinks() {
+  addEventListener('click', e => {
+    const j = e.target.closest && e.target.closest('[data-res-jump]');
+    if (j) { e.preventDefault(); openRes(j.dataset.resJump); return; }
+    const a = e.target.closest && e.target.closest('a.doc-file');
+    if (!a) return;
+    e.preventDefault();
+    openResHref(a.getAttribute('href'));
+  });
 }
 
 /* ---------- 评估深度：brief 卡片注入「快速 / 深度」+ 快速模式引导 ---------- */
@@ -540,14 +610,6 @@ function setDepth(d) {
   window.NEO_DEPTH = d;
   document.documentElement.dataset.depth = d;
   retagDocCard(d);
-  const host = document.querySelector('#wtabs');
-  const tab = host && host.querySelector('[data-panel="panelAnnot"]');
-  if (!tab) return;
-  tab.hidden = d === 'quick';
-  if (d === 'quick' && tab.getAttribute('aria-selected') === 'true') {
-    const first = [...host.querySelectorAll('[role=tab]')].find(x => !x.hidden);
-    if (first) first.click();
-  }
 }
 
 window.neoUpsellHtml = where => `
@@ -563,8 +625,8 @@ window.neoUpsellHtml = where => `
 
 function upsellChat() {
   if (window.NEO_DEPTH !== 'quick') return;
-  /* 报告不再内嵌，改以文档卡片（C 端）/ 批量结果（B 端）作为「已出结果」的判据 */
-  if (!document.querySelector('#neoDocChat, #repHost .doc-out, #workBody .batch')) return;
+  /* 结果都不内嵌了，以对话框里的结果文档卡片作为「已出结果」的判据 */
+  if (!document.querySelector('#neoDocChat')) return;
   if (document.querySelector('#neoUpsellChat')) return;
   const bs = document.querySelectorAll('#chatScroll .msg.ai .bubble');
   const b = bs[bs.length - 1];
@@ -577,27 +639,18 @@ window.neoUpgrade = function () {
   setDepth('deep');
   document.querySelectorAll('.neo-upsell').forEach(n => n.remove());
   toast('已升级为深度评估，分集问题标注已生成');
+  /* 结果页里点的升级：由结果页自己解锁标注 tab */
+  if (typeof window.neoOnUpgrade === 'function') { window.neoOnUpgrade(); return; }
+  /* 评估页里点的升级：结果文档清单重算，多出一份「分集问题标注」 */
+  if (typeof window.neoDocRebuild === 'function') window.neoDocRebuild();
   if (typeof say === 'function')
     say('ai', `已按<b>深度评估</b>重新精读全本：在原评估报告之上补出<b>分集问题标注</b>，
       每处问题都落到「第几集 · 第几场 · 哪句台词」，并给判断依据与改写建议。
-      右侧「分集问题标注」已解锁，报告里的「第 N 集」也可以直接跳过去了。`);
-  const host = document.querySelector('#wtabs');
-  if (host) activateTab(host, 'panelAnnot');
+      结果文档里已多出一份<b>分集问题标注</b>，点开即可看到每处问题对应的原文位置。`);
 };
 
-function depth() {
-  const chat = document.querySelector('#chatScroll');
-  if (!chat) return;
-  const scan = () => {
-    const card = chat.querySelector('#briefCard');
-    trimBrief(card);
-    injectDepth(card);
-    stripPay(chat);
-    placeDocCard();
-    upsellChat();
-  };
-  new MutationObserver(scan).observe(chat, { childList: true, subtree: true });
-  scan();
+/* 升级按钮等全局委托：与 depth() 分开注册，无对话区的页面（结果页）同样生效 */
+function depthClicks() {
   addEventListener('click', e => {
     const dc = e.target.closest && e.target.closest('.neo-depth-fld [data-group=depth] .chip');
     if (dc) setTimeout(() => syncDepthNote(dc.dataset.v), 0);
@@ -621,19 +674,53 @@ function depth() {
   }, true);
 }
 
-/* ---------- 供独立报告页反向驱动：跳到本页的分集问题标注 ---------- */
-/* annot 是 diagnose.js / batch.js 里的顶层 let，同属全局词法作用域，可裸名读取 */
-window.neoEpJump = function (ep, dim) {
-  const host = document.querySelector('#wtabs');
-  const tab = host && host.querySelector('[data-panel="panelAnnot"]');
-  if (!tab || tab.hidden) return false;
-  try {
-    if (typeof annot === 'undefined' || !annot || typeof annot.goto !== 'function') return false;
-    activateTab(host, 'panelAnnot');
-    annot.goto(ep, dim);
-    return true;
-  } catch (e) { return false; }
-};
+function depth() {
+  const chat = document.querySelector('#chatScroll');
+  if (!chat) return;
+  const scan = () => {
+    const card = chat.querySelector('#briefCard');
+    trimBrief(card);
+    injectDepth(card);
+    stripPay(chat);
+    placeDocCard();
+    retextChat();
+    upsellChat();
+  };
+  new MutationObserver(scan).observe(chat, { childList: true, subtree: true });
+  scan();
+}
+
+/* ---------- 对话文案纠偏 + 结果页跳转入口 ---------- */
+/* v1 的答案里常说「已在右侧打开…」，结果都搬走后这句不再成立：改写措辞，并补一个跳转按钮 */
+/* 替换后文本里已无「右侧」，重复执行无副作用，故不做已处理标记（气泡内容会流式追加） */
+const RETEXT = [[/已在右侧打开/g, '可在结果页打开'], [/右侧/g, '结果页']];
+const JUMP_T = { report: '评估报告', annot: '分集问题标注', diff: '修改对比', batch: '批量评估结果' };
+
+function jumpKeyOf(tx) {
+  if (/改前改后|采纳|撤销|修改对比/.test(tx)) return 'diff';
+  if (/标注|第\s*\d+\s*集|台词/.test(tx)) return 'annot';
+  if (/批量|全部稿件|拦截/.test(tx)) return 'batch';
+  return 'report';
+}
+
+function retextChat() {
+  document.querySelectorAll('#chatScroll .msg.ai .bubble').forEach(b => {
+    const w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT);
+    let n, hit = false;
+    while ((n = w.nextNode())) {
+      if (n.nodeValue.indexOf('右侧') < 0) continue;
+      let s = n.nodeValue;
+      RETEXT.forEach(([re, to]) => { s = s.replace(re, to); });
+      n.nodeValue = s;
+      hit = true;
+    }
+    /* 已经带了结果文档卡片组的那条消息不再重复给跳转按钮 */
+    if (!hit || !DOC_FILES || b.querySelector('.res-jump, .doc-out')) return;
+    const k = jumpKeyOf(b.textContent);
+    b.insertAdjacentHTML('beforeend',
+      `<button class="res-jump" type="button" data-res-jump="${k}">在结果页查看${JUMP_T[k]} <i>↗</i></button>`);
+  });
+}
 
 /* ---------- 内容重绘后统一补动效（幂等） ---------- */
 function enhance(root) {
@@ -685,7 +772,8 @@ function keys() {
 /* ---------- 启动 ---------- */
 function boot() {
   stars(); spotlight(); ripples(); keys();
-  tabIndicator(); chatStream(); scrollBar(); watch(); dropReportTab(); soloChat(); depth();
+  tabIndicator(); chatStream(); scrollBar(); watch();
+  hideWorkTabs(); soloChat(); depth(); depthClicks(); pingOnChat(); trackDocLinks();
   if (PAGE === 'entry') { typer(); uniBox(); }
 }
 if (document.readyState === 'loading') addEventListener('DOMContentLoaded', boot);

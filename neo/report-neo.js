@@ -199,47 +199,67 @@ const pad2 = n => String(n).padStart(2, '0');
 const docNo = title => 'SE-' +
   Math.abs([...String(title)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7) % 90000 + 10000);
 
-/* ---------- 评估结果文档：报告正文只在独立页面展示 ---------- */
-/* 状态全部编码进 URL，独立页用同一份 mock 数据还原出同一份报告 */
+/* ---------- 评估结果文档：所有评估结果都在独立的结果页展示 ---------- */
+/* 状态全部编码进 URL，结果页用同一份 mock 数据还原出同样的结果 */
 /* neo.js 的 PAGE 封在自身 IIFE 里取不到，这里从 body 上自行读取 */
 const pageOf = () => (document.body && document.body.dataset.page) || '';
 
-function docLink(script, use, showMatch, titleNote) {
+function resultLink(tab, use, showMatch, titleNote) {
   const pg = pageOf();
   const p = new URLSearchParams();
   p.set('from', pg === 'batch' ? 'batch' : 'diagnose');
-  if (pg === 'batch' && typeof curId !== 'undefined' && curId) p.set('id', curId);
+  p.set('tab', tab);
+  if (pg === 'batch') {
+    if (typeof curId !== 'undefined' && curId) p.set('id', curId);
+    if (typeof N !== 'undefined' && N) p.set('n', N);
+    const req = (typeof CHOSEN !== 'undefined' && CHOSEN.req) || '';
+    if (req) p.set('req', req);
+  }
   p.set('dims', use.map(r => r.dim).join(','));
   const pf = (typeof CHOSEN !== 'undefined' && CHOSEN.platforms) || [];
   if (showMatch && pf.length) p.set('pf', pf.join(','));
   p.set('depth', window.NEO_DEPTH === 'quick' ? 'quick' : 'deep');
   if (titleNote) p.set('note', titleNote);
-  return 'report.html?' + p.toString();
+  return 'result.html?' + p.toString();
 }
 
-function docMeta(script, use, cnt, chapters, stamp, showMatch, titleNote) {
-  return {
-    href: docLink(script, use, showMatch, titleNote),
-    title: `《${script.title}》剧本评估报告`,
+/* 本次产出了哪些结果文档：批量结论（B 端）/ 评估报告 / 分集问题标注（深度评估） */
+function docFiles(script, use, cnt, chapters, stamp, showMatch, titleNote) {
+  const pg = pageOf();
+  const files = [];
+  if (pg === 'batch') {
+    const data = (typeof DATA !== 'undefined' && DATA) || [];
+    const n = (typeof N !== 'undefined' && N) || data.length;
+    const sa = data.filter(b => b.grade === 'S' || b.grade === 'A').length;
+    files.push({ k: 'batch', ico: '▩', title: '9 月第 1 批投稿 · 批量评估结果',
+      sub: `${n} 份稿件 · 符合审稿要求 ${data.filter(b => b.match).length} 部 · S/A 级 ${sa} 部
+        · 拦截无效投稿 ${data.filter(b => b.reject).length} 份 · ${stamp}` });
+  }
+  files.push({ k: 'report', ico: '▤', title: `《${script.title}》剧本评估报告`,
     sub: `${docNo(script.title)} · 共三章（评估结论 / 分维度得分 / 详细评估 ${chapters} 部分）
-      · ${use.length} 个维度 · ${cnt.issues} 处问题 · ${stamp}`
-  };
+      · ${use.length} 个维度 · ${cnt.issues} 处问题 · ${stamp}` });
+  if (window.NEO_DEPTH !== 'quick')
+    files.push({ k: 'annot', ico: '◫', title: `《${script.title}》分集问题标注`,
+      sub: `已解析前 ${script.meta.parsedEps} 集 · ${cnt.issues} 处问题（致命 ${cnt.p0} · 严重 ${cnt.p1}）
+        · 定位到「第几集 · 第几场 · 哪句台词」${pg === 'batch' ? ' · 只读标注' : ' · 可一键修复并看改前改后'}` });
+  return files.map(f => ({ ...f, href: resultLink(f.k, use, showMatch, titleNote) }));
 }
 
-/* 文档入口卡片：chat 版进 C 端对话框，panel 版进 B 端「剧本评估报告」tab */
-window.neoDocCardHtml = (m, where) => `
+/* 结果文档入口卡片组：投进对话框里的「评估结果文档」区块 */
+/* 不加 rel=noopener——结果页要靠 window.opener 与评估页共享同一份剧本数据（同源本地页） */
+window.neoDocGroupHtml = (files, where) => `
   <div class="doc-out${where === 'chat' ? ' in-chat' : ''}"${where === 'chat' ? ' id="neoDocChat"' : ''}>
-    <div class="doc-out-t"><span class="dot"></span>评估结果文档</div>
-    <a class="card doc-file" href="${m.href}" target="_blank" rel="noopener"
-       title="在新页面打开完整评估报告">
-      <span class="df-ico">▤</span>
-      <span class="df-main">
-        <b>${esc(m.title)}</b>
-        <em>${m.sub}</em>
-      </span>
-      <span class="df-go">在新页面打开 <i>↗</i></span>
-    </a>
-    <div class="doc-out-h">点开在新页面全屏展示报告正文，不带左侧对话区，适合逐章细读、投屏评审或直接导出。</div>
+    <div class="doc-out-t"><span class="dot"></span>评估结果文档 <i class="dc-n">${files.length} 份</i></div>
+    <div class="doc-files">${files.map(f => `
+      <a class="card doc-file" href="${f.href}" target="_blank" data-rk="${f.k}"
+         title="在新页面打开：${esc(f.title)}">
+        <span class="df-ico">${f.ico}</span>
+        <span class="df-main"><b>${esc(f.title)}</b><em>${f.sub}</em></span>
+        <span class="df-go">在新页面打开 <i>↗</i></span>
+      </a>`).join('')}</div>
+    <div class="doc-out-h">${files.length > 1
+      ? '这几份结果同属一个结果页，点任意一份都会在新页面打开并直接定位到对应部分'
+      : '点开在新页面全屏展示'}，不带左侧对话区，适合逐章细读、投屏评审或直接导出。</div>
   </div>`;
 
 
@@ -287,18 +307,17 @@ window.renderReport = function (host, script, opts = {}) {
   const deep = window.NEO_DEPTH === 'quick' ? '快速评估（仅评估报告）' : '深度评估（评估报告 + 分集问题标注）';
   const pfList = (typeof CHOSEN !== 'undefined' && (CHOSEN.platforms || []).length)
     ? CHOSEN.platforms.map(esc).join('、') : '未指定';
+  /* 题材 / 地区在 mock 里挂在 brief 上（meta 里没有这两项） */
+  const bf = script.brief || {};
 
-  /* 报告正文只在独立页面展示：评估页里只给一个文档入口 */
-  /* C 端投进对话框（位置由 neo.js 决定），B 端放在「剧本评估报告」tab 里 */
+  /* 评估页不再内嵌任何结果：只把结果文档入口投进对话框，正文都在结果页看 */
   const PG = pageOf();
-  if (PG !== 'report') {
-    const meta = docMeta(script, use, cnt, TABS.length, stamp, showMatch, titleNote);
-    if (PG === 'batch') {
-      host.innerHTML = window.neoDocCardHtml(meta, 'panel');
-    } else {
-      host.innerHTML = '';
-      if (typeof window.neoDocCard === 'function') window.neoDocCard(meta);
-    }
+  if (PG !== 'report' && PG !== 'result') {
+    host.innerHTML = '';
+    const build = () => docFiles(script, use, cnt, TABS.length, stamp, showMatch, titleNote);
+    /* 快速评估升级为深度后，清单要重算（多一份分集问题标注），故把构造过程留给 neo.js */
+    window.neoDocRebuild = () => { if (typeof window.neoDocCard === 'function') window.neoDocCard(build()); };
+    window.neoDocRebuild();
     return;
   }
 
@@ -326,7 +345,7 @@ window.renderReport = function (host, script, opts = {}) {
       <header class="doc-head">
         <div class="doc-kicker">短剧剧本评估报告</div>
         <h1 class="doc-title">《${esc(script.title)}》</h1>
-        <div class="doc-byline">编剧 ${esc(script.author || '—')} · ${esc(script.meta.genre)} · ${esc(script.meta.region)}
+        <div class="doc-byline">编剧 ${esc(script.author || '—')} · ${esc(bf.mode || '短剧剧本')} · ${esc(bf.region || '中国')}
           ${titleNote ? `<span class="tag">${esc(titleNote)}</span>` : ''}</div>
         <div class="doc-headline">
           <div class="grade ${gradeCls(script.grade)}">${script.grade}</div>
