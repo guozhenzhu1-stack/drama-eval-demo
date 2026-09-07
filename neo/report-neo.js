@@ -199,7 +199,7 @@ const pad2 = n => String(n).padStart(2, '0');
 const docNo = title => 'SE-' +
   Math.abs([...String(title)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7) % 90000 + 10000);
 
-/* ---------- 评估结果文档：在新页面全屏打开报告正文 ---------- */
+/* ---------- 评估结果文档：报告正文只在独立页面展示 ---------- */
 /* 状态全部编码进 URL，独立页用同一份 mock 数据还原出同一份报告 */
 /* neo.js 的 PAGE 封在自身 IIFE 里取不到，这里从 body 上自行读取 */
 const pageOf = () => (document.body && document.body.dataset.page) || '';
@@ -217,24 +217,31 @@ function docLink(script, use, showMatch, titleNote) {
   return 'report.html?' + p.toString();
 }
 
-function docFileHtml(script, use, cnt, chapters, stamp, showMatch, titleNote) {
-  if (pageOf() === 'report') return '';
-  return `
-  <div class="doc-out">
+function docMeta(script, use, cnt, chapters, stamp, showMatch, titleNote) {
+  return {
+    href: docLink(script, use, showMatch, titleNote),
+    title: `《${script.title}》剧本评估报告`,
+    sub: `${docNo(script.title)} · 共三章（评估结论 / 分维度得分 / 详细评估 ${chapters} 部分）
+      · ${use.length} 个维度 · ${cnt.issues} 处问题 · ${stamp}`
+  };
+}
+
+/* 文档入口卡片：chat 版进 C 端对话框，panel 版进 B 端「剧本评估报告」tab */
+window.neoDocCardHtml = (m, where) => `
+  <div class="doc-out${where === 'chat' ? ' in-chat' : ''}"${where === 'chat' ? ' id="neoDocChat"' : ''}>
     <div class="doc-out-t"><span class="dot"></span>评估结果文档</div>
-    <a class="card doc-file" href="${docLink(script, use, showMatch, titleNote)}"
-       target="_blank" rel="noopener" title="在新页面打开完整评估报告">
+    <a class="card doc-file" href="${m.href}" target="_blank" rel="noopener"
+       title="在新页面打开完整评估报告">
       <span class="df-ico">▤</span>
       <span class="df-main">
-        <b>《${esc(script.title)}》剧本评估报告</b>
-        <em>${docNo(script.title)} · 共三章（评估结论 / 分维度得分 / 详细评估 ${chapters} 部分）
-          · ${use.length} 个维度 · ${cnt.issues} 处问题 · ${stamp}</em>
+        <b>${esc(m.title)}</b>
+        <em>${m.sub}</em>
       </span>
       <span class="df-go">在新页面打开 <i>↗</i></span>
     </a>
-    <div class="doc-out-h">文档页只展示报告正文，不带左侧对话区，适合逐章细读、投屏评审或直接导出。</div>
+    <div class="doc-out-h">点开在新页面全屏展示报告正文，不带左侧对话区，适合逐章细读、投屏评审或直接导出。</div>
   </div>`;
-}
+
 
 /* 导出格式菜单：点击空白处收起（模块级只注册一次） */
 document.addEventListener('click', e => {
@@ -280,6 +287,20 @@ window.renderReport = function (host, script, opts = {}) {
   const deep = window.NEO_DEPTH === 'quick' ? '快速评估（仅评估报告）' : '深度评估（评估报告 + 分集问题标注）';
   const pfList = (typeof CHOSEN !== 'undefined' && (CHOSEN.platforms || []).length)
     ? CHOSEN.platforms.map(esc).join('、') : '未指定';
+
+  /* 报告正文只在独立页面展示：评估页里只给一个文档入口 */
+  /* C 端投进对话框（位置由 neo.js 决定），B 端放在「剧本评估报告」tab 里 */
+  const PG = pageOf();
+  if (PG !== 'report') {
+    const meta = docMeta(script, use, cnt, TABS.length, stamp, showMatch, titleNote);
+    if (PG === 'batch') {
+      host.innerHTML = window.neoDocCardHtml(meta, 'panel');
+    } else {
+      host.innerHTML = '';
+      if (typeof window.neoDocCard === 'function') window.neoDocCard(meta);
+    }
+    return;
+  }
 
   host.innerHTML = `
   <div class="report rep-doc">
@@ -374,8 +395,6 @@ window.renderReport = function (host, script, opts = {}) {
         <span class="doc-foot-no">${docNo(script.title)} · ${stamp}</span>
       </footer>
     </article>
-
-    ${docFileHtml(script, use, cnt, TABS.length, stamp, showMatch, titleNote)}
   </div>`;
 
   host.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => {

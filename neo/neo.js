@@ -383,14 +383,23 @@ function uniBox() {
 }
 
 /* ---------- 澄清阶段全屏对话，出结果后自动分栏 ---------- */
-const HAS_RESULT = '.report,.batch,.annot,.tbl';
+const HAS_RESULT = '.report,.batch,.annot,.tbl,.doc-out';
 function soloChat() {
   const studio = document.querySelector('.studio');
   if (!studio) return;
   const panels = [...document.querySelectorAll('#workBody .work-panel')];
   if (!panels.length) return;
   let first = true;
-  const ready = () => panels.some(p => p.querySelector(HAS_RESULT));
+  /* 只认「tab 还看得见」的面板：C 端快速评估下全部 tab 都隐藏，对话框就该一直全宽 */
+  const ready = () => {
+    const wt = document.querySelector('#wtabs');
+    const tabs = wt ? [...wt.querySelectorAll('[role=tab]')].filter(t => !t.hidden) : [];
+    if (wt && !tabs.length) return false;
+    const live = tabs.length
+      ? tabs.map(t => document.getElementById(t.dataset.panel)).filter(Boolean)
+      : panels;
+    return live.some(p => p.querySelector(HAS_RESULT));
+  };
   const sync = () => {
     const on = ready();
     if (on === !studio.classList.contains('solo')) { first = false; return; }
@@ -404,7 +413,50 @@ function soloChat() {
   };
   studio.classList.add('solo');
   panels.forEach(p => new MutationObserver(sync).observe(p, { childList: true, subtree: true }));
+  const wt = document.querySelector('#wtabs');
+  if (wt) new MutationObserver(sync).observe(wt, { attributes: true, subtree: true, attributeFilter: ['hidden'] });
   sync();
+}
+
+/* ---------- 评估结果文档：报告不再内嵌，C 端只在对话框里给一个入口 ---------- */
+let DOC_META = null;
+
+/* report-neo.js 渲染时把文档元信息交过来，卡片挂在哪由这里决定 */
+window.neoDocCard = function (meta) {
+  DOC_META = meta;
+  const old = document.querySelector('#neoDocChat');
+  if (old) old.outerHTML = window.neoDocCardHtml(meta, 'chat');
+  else placeDocCard();
+};
+
+/* 挂到「评估完成」那条 AI 消息下方：步骤条与 brief 卡片所在的气泡跳过 */
+function placeDocCard() {
+  if (!DOC_META || document.querySelector('#neoDocChat')) return;
+  if (typeof window.neoDocCardHtml !== 'function') return;
+  const bs = document.querySelectorAll('#chatScroll .msg.ai .bubble');
+  const b = bs[bs.length - 1];
+  if (!b || b.querySelector('.steps') || b.querySelector('#briefCard')) return;
+  b.insertAdjacentHTML('beforeend', window.neoDocCardHtml(DOC_META, 'chat'));
+}
+
+/* 快速评估升级为深度评估后，已经贴出去的文档入口链接也要跟着改 depth */
+function retagDocCard(d) {
+  const fix = s => s.replace(/([?&]depth=)\w+/, '$1' + d);
+  document.querySelectorAll('#neoDocChat .doc-file, #repHost > .doc-out .doc-file')
+    .forEach(a => a.setAttribute('href', fix(a.getAttribute('href'))));
+  if (DOC_META) DOC_META = { ...DOC_META, href: fix(DOC_META.href) };
+}
+
+/* C 端工作台去掉「评估报告」tab：报告只走文档入口，工作台留标注与对比 */
+function dropReportTab() {
+  if (PAGE !== 'diagnose') return;
+  const host = document.querySelector('#wtabs');
+  const tab = host && host.querySelector('[data-panel="panelReport"]');
+  if (!tab) return;
+  tab.hidden = true;
+  if (tab.getAttribute('aria-selected') !== 'true') return;
+  const first = [...host.querySelectorAll('[role=tab]')].find(x => !x.hidden);
+  if (first) first.click();
 }
 
 /* ---------- 评估深度：brief 卡片注入「快速 / 深度」+ 快速模式引导 ---------- */
@@ -487,6 +539,7 @@ function stripPay(root) {
 function setDepth(d) {
   window.NEO_DEPTH = d;
   document.documentElement.dataset.depth = d;
+  retagDocCard(d);
   const host = document.querySelector('#wtabs');
   const tab = host && host.querySelector('[data-panel="panelAnnot"]');
   if (!tab) return;
@@ -510,7 +563,8 @@ window.neoUpsellHtml = where => `
 
 function upsellChat() {
   if (window.NEO_DEPTH !== 'quick') return;
-  if (!document.querySelector('#workBody .report, #workBody .batch')) return;
+  /* 报告不再内嵌，改以文档卡片（C 端）/ 批量结果（B 端）作为「已出结果」的判据 */
+  if (!document.querySelector('#neoDocChat, #repHost .doc-out, #workBody .batch')) return;
   if (document.querySelector('#neoUpsellChat')) return;
   const bs = document.querySelectorAll('#chatScroll .msg.ai .bubble');
   const b = bs[bs.length - 1];
@@ -539,6 +593,7 @@ function depth() {
     trimBrief(card);
     injectDepth(card);
     stripPay(chat);
+    placeDocCard();
     upsellChat();
   };
   new MutationObserver(scan).observe(chat, { childList: true, subtree: true });
@@ -630,7 +685,7 @@ function keys() {
 /* ---------- 启动 ---------- */
 function boot() {
   stars(); spotlight(); ripples(); keys();
-  tabIndicator(); chatStream(); scrollBar(); watch(); soloChat(); depth();
+  tabIndicator(); chatStream(); scrollBar(); watch(); dropReportTab(); soloChat(); depth();
   if (PAGE === 'entry') { typer(); uniBox(); }
 }
 if (document.readyState === 'loading') addEventListener('DOMContentLoaded', boot);

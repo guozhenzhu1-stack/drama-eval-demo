@@ -1209,6 +1209,19 @@ ins.dv { background: rgba(16, 185, 129, .16); color: #06795a; text-decoration: n
   .doc-file .df-go { margin-left: 49px; }
 }
 
+/* 对话框内版式：气泡里宽度有限，图标缩小、按钮换行占满 */
+.doc-out.in-chat { max-width: none; margin: 11px 0 0; }
+.doc-out.in-chat .doc-out-t { margin-bottom: 7px; font-size: 12px; }
+.doc-out.in-chat .doc-file { flex-wrap: wrap; gap: 10px; padding: 11px 12px; }
+.doc-out.in-chat .df-ico { width: 32px; height: 38px; font-size: 16px; }
+.doc-out.in-chat .df-main b { font-size: 13.5px; }
+.doc-out.in-chat .df-main em { font-size: 11px; }
+.doc-out.in-chat .df-go { width: 100%; justify-content: center; }
+.doc-out.in-chat .doc-out-h { margin-top: 7px; font-size: 11.5px; }
+
+/* B 端「评估报告文档」tab：面板里只放文档入口，给出版心与留白 */
+#repHost > .doc-out { padding: var(--sp-4) var(--sp-4) 0; }
+
 /* 独立文档页：无对话区，整页只放报告正文 */
 .doc-solo { min-height: calc(100vh - var(--topbar-h)); padding-bottom: var(--sp-7); }
 .doc-solo .rep-doc { padding-top: var(--sp-5); }
