@@ -29,6 +29,11 @@
   li { margin-bottom: 6px; }
   .note { margin-top: 32px; padding: 14px 16px; border-radius: 12px;
     background: #f7f9fe; border: 1px dashed #d5ddef; color: #5b6478; font-size: 13px; }
+  .ver { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+    margin: -20px 0 30px; padding: 9px 13px; border-radius: 10px;
+    background: #f2f7ff; border: 1px solid #dce7fb; color: #47526a; font-size: 12.5px; }
+  .ver b { font-size: 12.5px; color: #0a6fa8; }
+  .ver i { font-style: normal; color: #8b94a8; }
   @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -36,6 +41,10 @@
 <div class="wrap">
   <h1>剧本评估功能 · 交互 Demo</h1>
   <p class="sub">静态原型，纯前端模拟数据，可直接点击体验完整流程。建议从下面两个入口进入。</p>
+
+  <p class="ver"><b>v3 · 2026-09-07 更新</b>
+    <span>新增「评估结果文档」独立报告页；三个页面顶栏的导航按钮已移除。</span>
+    <i>看不到上述变化说明是浏览器缓存，按 Shift 点刷新（Mac 为 ⌘⇧R）强制重载即可。</i></p>
 
   <span class="tag">当前评审版本</span>
   <div class="grid">
