@@ -566,6 +566,20 @@ function depth() {
   }, true);
 }
 
+/* ---------- 供独立报告页反向驱动：跳到本页的分集问题标注 ---------- */
+/* annot 是 diagnose.js / batch.js 里的顶层 let，同属全局词法作用域，可裸名读取 */
+window.neoEpJump = function (ep, dim) {
+  const host = document.querySelector('#wtabs');
+  const tab = host && host.querySelector('[data-panel="panelAnnot"]');
+  if (!tab || tab.hidden) return false;
+  try {
+    if (typeof annot === 'undefined' || !annot || typeof annot.goto !== 'function') return false;
+    activateTab(host, 'panelAnnot');
+    annot.goto(ep, dim);
+    return true;
+  } catch (e) { return false; }
+};
+
 /* ---------- 内容重绘后统一补动效（幂等） ---------- */
 function enhance(root) {
   if (!root || root.nodeType !== 1) return;

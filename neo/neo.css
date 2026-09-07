@@ -1161,9 +1161,54 @@ ins.dv { background: rgba(16, 185, 129, .16); color: #06795a; text-decoration: n
 
 /* 打印/导出预览：只留纸面 */
 @media print {
-  body::before, body::after, #neoStars, .topbar, .doc-bar, .neo-upsell { display: none !important; }
+  body::before, body::after, #neoStars, .topbar, .doc-bar, .neo-upsell, .doc-out { display: none !important; }
   .rep-doc { padding: 0; max-width: none; }
   .doc-page { border: 0; box-shadow: none; max-width: none; padding: 0; }
   .doc-page .rpanel { display: block !important; }
   .doc-page .rtabs-wrap { display: none; }
 }
+
+/* ================= 评估结果文档：入口卡片 + 独立文档页 ================= */
+.doc-out { max-width: 900px; margin: var(--sp-5) auto 0; }
+.doc-out-t {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 10px;
+  font-size: 12.5px; font-weight: 650; color: var(--text-secondary); letter-spacing: .02em;
+}
+.doc-out-t .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--grad); }
+.doc-out-h { margin-top: 8px; font-size: 12px; line-height: 1.75; color: var(--text-muted); }
+
+.doc-file {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 14px 16px; text-decoration: none; color: inherit;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--surface-1); transition: .18s;
+}
+.doc-file:hover {
+  text-decoration: none; border-color: var(--accent);
+  box-shadow: 0 6px 20px rgba(20, 40, 100, .10); transform: translateY(-1px);
+}
+.doc-file .df-ico {
+  flex: none; width: 40px; height: 46px; display: grid; place-items: center;
+  border-radius: 6px 10px 6px 6px; background: var(--grad); color: var(--on-accent);
+  font-size: 19px; box-shadow: var(--glow);
+}
+.doc-file .df-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.doc-file .df-main b { font-size: 14.5px; }
+.doc-file .df-main em {
+  font-style: normal; font-size: 11.5px; line-height: 1.7; color: var(--text-muted);
+}
+.doc-file .df-go {
+  flex: none; display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 600;
+  color: var(--accent); background: var(--surface-2); border: 1px solid var(--border);
+}
+.doc-file:hover .df-go { color: var(--on-accent); background: var(--grad); border-color: transparent; }
+.doc-file .df-go i { font-style: normal; }
+@media (max-width: 720px) {
+  .doc-file { flex-wrap: wrap; }
+  .doc-file .df-go { margin-left: 49px; }
+}
+
+/* 独立文档页：无对话区，整页只放报告正文 */
+.doc-solo { min-height: calc(100vh - var(--topbar-h)); padding-bottom: var(--sp-7); }
+.doc-solo .rep-doc { padding-top: var(--sp-5); }

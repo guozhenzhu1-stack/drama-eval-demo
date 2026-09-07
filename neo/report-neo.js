@@ -199,6 +199,43 @@ const pad2 = n => String(n).padStart(2, '0');
 const docNo = title => 'SE-' +
   Math.abs([...String(title)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7) % 90000 + 10000);
 
+/* ---------- 评估结果文档：在新页面全屏打开报告正文 ---------- */
+/* 状态全部编码进 URL，独立页用同一份 mock 数据还原出同一份报告 */
+/* neo.js 的 PAGE 封在自身 IIFE 里取不到，这里从 body 上自行读取 */
+const pageOf = () => (document.body && document.body.dataset.page) || '';
+
+function docLink(script, use, showMatch, titleNote) {
+  const pg = pageOf();
+  const p = new URLSearchParams();
+  p.set('from', pg === 'batch' ? 'batch' : 'diagnose');
+  if (pg === 'batch' && typeof curId !== 'undefined' && curId) p.set('id', curId);
+  p.set('dims', use.map(r => r.dim).join(','));
+  const pf = (typeof CHOSEN !== 'undefined' && CHOSEN.platforms) || [];
+  if (showMatch && pf.length) p.set('pf', pf.join(','));
+  p.set('depth', window.NEO_DEPTH === 'quick' ? 'quick' : 'deep');
+  if (titleNote) p.set('note', titleNote);
+  return 'report.html?' + p.toString();
+}
+
+function docFileHtml(script, use, cnt, chapters, stamp, showMatch, titleNote) {
+  if (pageOf() === 'report') return '';
+  return `
+  <div class="doc-out">
+    <div class="doc-out-t"><span class="dot"></span>评估结果文档</div>
+    <a class="card doc-file" href="${docLink(script, use, showMatch, titleNote)}"
+       target="_blank" rel="noopener" title="在新页面打开完整评估报告">
+      <span class="df-ico">▤</span>
+      <span class="df-main">
+        <b>《${esc(script.title)}》剧本评估报告</b>
+        <em>${docNo(script.title)} · 共三章（评估结论 / 分维度得分 / 详细评估 ${chapters} 部分）
+          · ${use.length} 个维度 · ${cnt.issues} 处问题 · ${stamp}</em>
+      </span>
+      <span class="df-go">在新页面打开 <i>↗</i></span>
+    </a>
+    <div class="doc-out-h">文档页只展示报告正文，不带左侧对话区，适合逐章细读、投屏评审或直接导出。</div>
+  </div>`;
+}
+
 /* 导出格式菜单：点击空白处收起（模块级只注册一次） */
 document.addEventListener('click', e => {
   document.querySelectorAll('.dl-menu:not([hidden])').forEach(m => {
@@ -337,6 +374,8 @@ window.renderReport = function (host, script, opts = {}) {
         <span class="doc-foot-no">${docNo(script.title)} · ${stamp}</span>
       </footer>
     </article>
+
+    ${docFileHtml(script, use, cnt, TABS.length, stamp, showMatch, titleNote)}
   </div>`;
 
   host.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => {
