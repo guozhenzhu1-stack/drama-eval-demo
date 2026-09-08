@@ -355,6 +355,10 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 }
 .samp > i { font-style: normal; font-size: 14px; }
 .samp:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
+/* 载入后停在选中态：示例只是填进输入框，还要用户自己点发送 */
+.samp[aria-pressed="true"] {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-wash); font-weight: 600;
+}
 
 .file-chip .fc-meta { margin-left: 6px; font-style: normal; font-size: 11.5px; color: var(--text-muted); }
 .file-chip .fc-x { margin-left: 8px; font-weight: 400; color: var(--text-muted); cursor: pointer; }

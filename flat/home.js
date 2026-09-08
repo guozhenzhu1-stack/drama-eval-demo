@@ -44,7 +44,7 @@ function paint() {
   $('#fileStat').textContent = f
     ? (f.eps && f.eps < 10 ? '体量较小，评估结果会直接回在对话里' : '多集剧本，会先确认评估口径与评估深度')
     : '';
-  if (f) $('#fileX').onclick = () => { FILES = []; paint(); };
+  if (f) $('#fileX').onclick = () => { FILES = []; markSamp(null); paint(); };
 }
 
 function take(list) {
@@ -52,6 +52,7 @@ function take(list) {
   if (!f) return;
   if (list.length > 1) toast('Demo 中一次评估一个剧本文件，已取第一个');
   FILES = [{ name: f.name, size: sizeOf(f.size), eps: epsOf(f.name) }];
+  markSamp(null);
   paint();
 }
 
@@ -66,7 +67,7 @@ box.addEventListener('drop', e => { halt(e); take(e.dataTransfer.files); });
 /* 发起评估：体量随文件走，后续分流交给 diagnose.html */
 function go() {
   const f = FILES[0];
-  if (!f) { toast('先添加一个剧本文件，或点下面的示例体量'); ta.focus(); return; }
+  if (!f) { toast('先点下面的示例剧本，或添加一个剧本文件'); ta.focus(); return; }
   const p = new URLSearchParams({ file: f.name, size: f.size, eps: f.eps, req: ta.value.trim() });
   if (f.words) p.set('words', f.words);
   if (f.part) p.set('part', '1');
@@ -78,15 +79,21 @@ ta.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey && (e.metaKey || e.ctrlKey)) { e.preventDefault(); go(); }
 });
 
+/* 示例只负责把剧本填进输入框，评估由用户自己点发送触发 */
+const markSamp = b => $$('[data-samp]', $('#sampRow'))
+  .forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+
 $('#sampRow').onclick = e => {
   const b = e.target.closest('[data-samp]');
   if (!b) return;
   const s = SAMPLES[b.dataset.samp];
   FILES = [{ name: s.file, size: s.size, eps: s.eps, words: s.words, part: s.part }];
   ta.value = s.req;
+  markSamp(b);
   fit(); paint();
-  toast('已载入示例剧本，正在发起评估');
-  setTimeout(go, 280);
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  toast('示例剧本已载入输入框，点右下角发送开始评估');
 };
 
 fit(); paint();
