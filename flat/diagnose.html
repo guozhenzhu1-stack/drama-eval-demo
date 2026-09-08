@@ -10,7 +10,9 @@
 <link rel="stylesheet" href="../neo/neo.css">
 <link rel="stylesheet" href="flat.css">
 </head>
-<body data-page="diagnose">
+<!-- data-page 用 cflow：绕开 neo.js 里针对 v1 diagnose 页的强制隐藏 tab 逻辑，
+     本页的 tab 显隐由 flow.js 按「上传体量 + 评估深度」自己决定 -->
+<body data-page="cflow" data-nav="diagnose">
 <aside class="sbar" id="sbar">
   <div class="sb-top">
     <span class="sb-logo">评</span>
@@ -20,15 +22,14 @@
   <nav class="sb-nav">
     <a class="sb-item" data-nav="entry" href="index.html"><i>🏠</i><span>首页</span></a>
     <a class="sb-item" data-nav="diagnose" href="diagnose.html?stage=result"><i>🔍</i><span>剧本诊断优化</span></a>
-    <a class="sb-item" data-nav="batch" href="batch.html?stage=result"><i>📚</i><span>批量审稿筛选</span></a>
     <button class="sb-item" type="button" data-soon="能力广场为后续规划，Demo 中未开放"><i>🧩</i><span>能力广场</span><em class="sb-new">NEW</em></button>
   </nav>
   <div class="sb-grp">最近评估</div>
   <div class="sb-recent">
     <a class="sb-rec on" href="diagnose.html?stage=result">《退婚当日，我闪婚了首富》</a>
-    <a class="sb-rec" href="batch.html?stage=result">9 月第 1 批投稿（50 份）</a>
     <a class="sb-rec" href="diagnose.html?stage=result">《总裁的隐婚娇妻》</a>
-    <a class="sb-rec" href="batch.html?stage=result">8 月末海外仓库存稿（32 份）</a>
+    <a class="sb-rec" href="diagnose.html?stage=result">《长夜将明》前 8 集</a>
+    <a class="sb-rec" href="diagnose.html?stage=result">《春风不度》第 1 集</a>
   </div>
   <div class="sb-foot">Demo 数据 · 模拟评估结果</div>
 </aside>
@@ -39,15 +40,15 @@
   <!-- 左：对话（常驻） -->
   <aside class="pane pane-chat" id="paneChat">
     <div class="pane-head">
-      <a class="btn btn-ghost btn-sm" href="index.html" title="返回入口">← 返回</a>
+      <a class="btn btn-ghost btn-sm" href="index.html" title="返回首页">← 返回</a>
       <h3>剧本诊断优化</h3>
-      <span class="tag">C 端 · 个人编剧</span>
+      <span class="tag" id="volTag"></span>
       <span class="spacer"></span>
     </div>
     <div class="pane-body"><div class="chat-scroll" id="chatScroll"></div></div>
     <div class="composer">
       <div id="quoteRef"></div>
-      <textarea id="chatInput" rows="2" placeholder="继续提问，或在结果页的正文里划选一段再下指令…"></textarea>
+      <textarea id="chatInput" rows="2" placeholder="继续提问，例如：伏笔怎么样 / 有没有合规风险 / 整本修复"></textarea>
       <div class="composer-bar">
         <span class="hint-inline" id="chatHint"></span>
         <span class="spacer"></span>
@@ -58,23 +59,20 @@
 
   <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" title="拖拽调整宽度，双击复位"></div>
 
-  <!-- 右：工作台（结果已移到独立结果页，这里保留骨架供脚本挂载） -->
+  <!-- 右：只在「多集 + 快速评估」时出现，直接摊开评估报告；其余路径整块收起 -->
   <main class="pane pane-work">
     <div class="pane-head">
       <div class="wtabs" role="tablist" aria-label="工作台" id="wtabs">
-        <button class="wtab" role="tab" aria-selected="true" data-panel="panelReport">评估报告</button>
-        <button class="wtab" role="tab" aria-selected="false" data-panel="panelAnnot">
-          分集问题标注 <span class="cnt" id="tabIssueCnt">18</span></button>
-        <button class="wtab" role="tab" aria-selected="false" data-panel="panelDiff" id="tabDiff" hidden>
-          修改对比 <span class="cnt" id="tabDiffCnt">0</span></button>
+        <button class="wtab" role="tab" aria-selected="true" data-panel="panelReport" id="tabReport" hidden>评估报告</button>
       </div>
       <span class="spacer"></span>
       <span class="hint-inline" id="workMeta"></span>
     </div>
     <div class="pane-body" id="workBody" style="display:flex;flex-direction:column">
       <div class="work-panel active" id="panelReport"></div>
-      <div class="work-panel" id="panelAnnot"></div>
-      <div class="work-panel" id="panelDiff"></div>
+      <!-- 标注与对比不出 tab：仅作为数据挂载点，供对话内改稿与结果页共享同一份数据 -->
+      <div class="work-panel" id="panelAnnot" hidden></div>
+      <div class="work-panel" id="panelDiff" hidden></div>
     </div>
   </main>
 </div>
@@ -86,7 +84,7 @@
 <script src="../neo/report-neo.js"></script>
 <script src="../js/annot.js"></script>
 <script src="../js/diffview.js"></script>
-<script src="../js/diagnose.js"></script>
+<script src="flow.js"></script>
 <script src="flat.js"></script>
 </body>
 </html>

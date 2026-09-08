@@ -334,3 +334,87 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
   .sb-top { justify-content: center; padding: 0; }
   .sb-item { justify-content: center; padding: 0; }
 }
+
+/* ================================================================
+   9. 首页：只留「标题 + 一个输入框 + 一行示例」
+   ================================================================ */
+.entry { padding-top: 84px; }
+.composer-uni .composer-foot { align-items: center; gap: 10px; }
+/* 发起评估收成一个圆形箭头按钮，放在输入框右下角 */
+#startBtn.send-btn {
+  width: 34px; height: 34px; padding: 0; border-radius: 50%;
+  display: grid; place-items: center; font-size: 16px; line-height: 1;
+}
+#startBtn.send-btn:disabled { opacity: .32; cursor: not-allowed; }
+
+.samp-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.samp {
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px;
+  border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-1);
+  color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer;
+}
+.samp > i { font-style: normal; font-size: 14px; }
+.samp:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
+
+.file-chip .fc-meta { margin-left: 6px; font-style: normal; font-size: 11.5px; color: var(--text-muted); }
+.file-chip .fc-x { margin-left: 8px; font-weight: 400; color: var(--text-muted); cursor: pointer; }
+.file-chip .fc-x:hover { color: var(--critical); }
+
+/* ================================================================
+   10. 对话内的评估结果（≤9 集路径）
+   ================================================================ */
+.fres { margin-top: 10px; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.fres-top {
+  display: flex; align-items: center; gap: 10px; padding: 11px 13px;
+  background: var(--surface-2); border-bottom: 1px solid var(--border);
+}
+.fres-top .grade { flex: none; }
+.fres-top .ft-tx { display: grid; gap: 2px; min-width: 0; }
+.fres-top .ft-tx b { font-size: 13.5px; }
+.fres-top .ft-tx span { font-size: 11.5px; color: var(--text-muted); }
+.fres-top .ft-sev { flex: none; display: flex; gap: 4px; }
+.fres-say { margin: 0; padding: 11px 13px; font-size: 13px; line-height: 1.75; }
+.fres .dim-bars { padding: 0 13px 11px; display: grid; gap: 7px; }
+.fres-list { padding: 0 13px; display: grid; gap: 8px; }
+.fres-list:last-of-type { padding-bottom: 12px; }
+.fres-iss { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 9px 11px; }
+.fres-iss .fi-top { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.fres-iss .fi-top b { font-size: 13px; font-weight: 650; }
+.fi-btn {
+  flex: none; height: 24px; padding: 0 10px; border: 1px solid var(--border-strong);
+  border-radius: 999px; background: var(--surface-1); color: var(--text-secondary);
+  font: inherit; font-size: 12px; cursor: pointer;
+}
+.fi-btn:hover { border-color: var(--accent); color: var(--accent); }
+.fi-btn:disabled { border-color: var(--good-line); background: var(--good-wash); color: var(--good-text); cursor: default; }
+.fres-iss .fi-q { font-size: 12.5px; color: var(--text-secondary); }
+.fres-iss .fi-why, .fres-iss .fi-fix { margin-top: 4px; font-size: 12.5px; color: var(--text-secondary); }
+.fres-iss .fi-fix { color: var(--text-primary); }
+.fres-more {
+  margin: 8px 13px 0; padding: 7px 0; width: calc(100% - 26px);
+  border: 1px dashed var(--border-strong); border-radius: var(--r-sm);
+  background: var(--surface-1); color: var(--text-secondary); font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.fres-more:hover { border-color: var(--accent); color: var(--accent); }
+.fres-foot {
+  margin-top: 10px; padding: 9px 13px; border-top: 1px solid var(--border);
+  background: var(--surface-2); font-size: 11.5px; color: var(--text-muted);
+}
+/* 改前 / 改后 */
+.fdiff { margin-top: 8px; display: grid; gap: 6px; }
+.fd-row { display: flex; gap: 8px; font-size: 12.5px; line-height: 1.7; }
+.fd-row em {
+  flex: none; font-style: normal; font-size: 11px; height: 18px; padding: 0 6px;
+  border-radius: 4px; line-height: 18px;
+}
+.fd-row.del em { background: #fdeaea; color: var(--critical); }
+.fd-row.add em { background: var(--good-wash); color: var(--good-text); }
+.fd-row.del span { color: var(--text-muted); text-decoration: line-through; }
+.msg.me .fd-row.del em, .msg.me .fd-row.add em { background: rgba(255, 255, 255, .2); color: #fff; }
+
+/* 全宽对话时右上角的那句说明：按当前分流改写 */
+:root .studio.solo .pane-head::after { content: '先确认评估口径与评估深度，评完再决定结果怎么展示'; }
+:root[data-flow="inline"] .studio.solo .pane-head::after { content: '体量不大，这次的评估结果直接回在对话里'; }
+:root[data-flow="deep"] .studio.solo .pane-head::after { content: '深度评估：完整结果在新页面打开，对话里给出摘要与入口'; }
+
+

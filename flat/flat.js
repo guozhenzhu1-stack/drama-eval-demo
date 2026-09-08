@@ -30,7 +30,7 @@ function sidebar() {
   if (!sb) return;
   document.body.classList.add('has-sbar');
 
-  const page = document.body.dataset.page || 'entry';
+  const page = document.body.dataset.nav || document.body.dataset.page || 'entry';
   const on = sb.querySelector(`.sb-item[data-nav="${page}"]`);
   if (on) { on.classList.add('on'); on.setAttribute('aria-current', 'page'); }
 
