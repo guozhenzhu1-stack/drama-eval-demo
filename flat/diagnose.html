@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>剧本诊断优化 · 剧本评估 Agent</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/eval.css">
+<link rel="stylesheet" href="../neo/neo.css">
+<link rel="stylesheet" href="flat.css">
+</head>
+<body data-page="diagnose">
+<aside class="sbar" id="sbar">
+  <div class="sb-top">
+    <span class="sb-logo">评</span>
+    <b class="sb-name">剧本评估 Agent</b>
+    <button class="sb-fold" id="sbFold" type="button" title="收起侧栏">◀</button>
+  </div>
+  <nav class="sb-nav">
+    <a class="sb-item" data-nav="entry" href="index.html"><i>🏠</i><span>首页</span></a>
+    <a class="sb-item" data-nav="diagnose" href="diagnose.html?stage=result"><i>🔍</i><span>剧本诊断优化</span></a>
+    <a class="sb-item" data-nav="batch" href="batch.html?stage=result"><i>📚</i><span>批量审稿筛选</span></a>
+    <button class="sb-item" type="button" data-soon="能力广场为后续规划，Demo 中未开放"><i>🧩</i><span>能力广场</span><em class="sb-new">NEW</em></button>
+  </nav>
+  <div class="sb-grp">最近评估</div>
+  <div class="sb-recent">
+    <a class="sb-rec on" href="diagnose.html?stage=result">《退婚当日，我闪婚了首富》</a>
+    <a class="sb-rec" href="batch.html?stage=result">9 月第 1 批投稿（50 份）</a>
+    <a class="sb-rec" href="diagnose.html?stage=result">《总裁的隐婚娇妻》</a>
+    <a class="sb-rec" href="batch.html?stage=result">8 月末海外仓库存稿（32 份）</a>
+  </div>
+  <div class="sb-foot">Demo 数据 · 模拟评估结果</div>
+</aside>
+
+<header id="topbar"></header>
+
+<div class="studio">
+  <!-- 左：对话（常驻） -->
+  <aside class="pane pane-chat" id="paneChat">
+    <div class="pane-head">
+      <a class="btn btn-ghost btn-sm" href="index.html" title="返回入口">← 返回</a>
+      <h3>剧本诊断优化</h3>
+      <span class="tag">C 端 · 个人编剧</span>
+      <span class="spacer"></span>
+    </div>
+    <div class="pane-body"><div class="chat-scroll" id="chatScroll"></div></div>
+    <div class="composer">
+      <div id="quoteRef"></div>
+      <textarea id="chatInput" rows="2" placeholder="继续提问，或在结果页的正文里划选一段再下指令…"></textarea>
+      <div class="composer-bar">
+        <span class="hint-inline" id="chatHint"></span>
+        <span class="spacer"></span>
+        <button class="btn btn-primary btn-sm" id="sendBtn" type="button">发送</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" title="拖拽调整宽度，双击复位"></div>
+
+  <!-- 右：工作台（结果已移到独立结果页，这里保留骨架供脚本挂载） -->
+  <main class="pane pane-work">
+    <div class="pane-head">
+      <div class="wtabs" role="tablist" aria-label="工作台" id="wtabs">
+        <button class="wtab" role="tab" aria-selected="true" data-panel="panelReport">评估报告</button>
+        <button class="wtab" role="tab" aria-selected="false" data-panel="panelAnnot">
+          分集问题标注 <span class="cnt" id="tabIssueCnt">18</span></button>
+        <button class="wtab" role="tab" aria-selected="false" data-panel="panelDiff" id="tabDiff" hidden>
+          修改对比 <span class="cnt" id="tabDiffCnt">0</span></button>
+      </div>
+      <span class="spacer"></span>
+      <span class="hint-inline" id="workMeta"></span>
+    </div>
+    <div class="pane-body" id="workBody" style="display:flex;flex-direction:column">
+      <div class="work-panel active" id="panelReport"></div>
+      <div class="work-panel" id="panelAnnot"></div>
+      <div class="work-panel" id="panelDiff"></div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/mock.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../neo/neo.js"></script>
+<script src="../js/report.js"></script>
+<script src="../neo/report-neo.js"></script>
+<script src="../js/annot.js"></script>
+<script src="../js/diffview.js"></script>
+<script src="../js/diagnose.js"></script>
+<script src="flat.js"></script>
+</body>
+</html>

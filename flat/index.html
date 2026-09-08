@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>剧本评估 · 剧本评估 Agent</title>
+<!-- 视觉风格 B：沿用 neo 的结构与逻辑，flat.css 最后加载，只重铸视觉 -->
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/eval.css">
+<link rel="stylesheet" href="../neo/neo.css">
+<link rel="stylesheet" href="flat.css">
+</head>
+<body data-page="entry">
+<aside class="sbar" id="sbar">
+  <div class="sb-top">
+    <span class="sb-logo">评</span>
+    <b class="sb-name">剧本评估 Agent</b>
+    <button class="sb-fold" id="sbFold" type="button" title="收起侧栏">◀</button>
+  </div>
+  <nav class="sb-nav">
+    <a class="sb-item" data-nav="entry" href="index.html"><i>🏠</i><span>首页</span></a>
+    <a class="sb-item" data-nav="diagnose" href="diagnose.html?stage=result"><i>🔍</i><span>剧本诊断优化</span></a>
+    <a class="sb-item" data-nav="batch" href="batch.html?stage=result"><i>📚</i><span>批量审稿筛选</span></a>
+    <button class="sb-item" type="button" data-soon="能力广场为后续规划，Demo 中未开放"><i>🧩</i><span>能力广场</span><em class="sb-new">NEW</em></button>
+  </nav>
+  <div class="sb-grp">最近评估</div>
+  <div class="sb-recent">
+    <a class="sb-rec" href="diagnose.html?stage=result">《退婚当日，我闪婚了首富》</a>
+    <a class="sb-rec" href="batch.html?stage=result">9 月第 1 批投稿（50 份）</a>
+    <a class="sb-rec" href="diagnose.html?stage=result">《总裁的隐婚娇妻》</a>
+    <a class="sb-rec" href="batch.html?stage=result">8 月末海外仓库存稿（32 份）</a>
+  </div>
+  <div class="sb-foot">Demo 数据 · 模拟评估结果</div>
+</aside>
+
+<header id="topbar"></header>
+
+<main class="entry">
+  <div class="entry-hero">
+    <h1>开始一次剧本评估</h1>
+    <div class="hero-sub">上传剧本、写清评估要求，或者直接挑一种评估模式开工</div>
+  </div>
+
+  <div class="card composer-card composer-uni" id="uniBox">
+    <div class="uni-top">
+      <textarea id="reqInput" rows="3"></textarea>
+    </div>
+    <input type="file" id="filePicker" multiple hidden
+           accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,text/plain">
+    <div class="file-list" id="fileList"></div>
+    <div class="composer-foot">
+      <button type="button" class="attach-btn" id="dropzone" title="添加剧本文件">
+        <span class="dz-icon">📎</span>
+        <span class="dz-main">添加剧本文件</span>
+        <span class="dz-hint" id="dzHint"></span>
+      </button>
+      <button class="btn btn-sm" id="loadSample">载入示例</button>
+      <span class="hint-inline" id="fileStat"></span>
+      <span class="spacer"></span>
+      <span class="cost" id="costHint"></span>
+      <button class="btn btn-primary btn-lg" id="startBtn" title="发起评估">发起评估</button>
+    </div>
+  </div>
+
+  <div class="skill-row">
+    <span class="sr-hint">选一种评估模式，指定本次要调用的能力</span>
+    <div class="mode-tabs" role="tablist" aria-label="评估模式">
+      <div class="mode-tab" role="tab" aria-selected="true" data-mode="diagnose" tabindex="0">
+        <i>🔍</i><span class="mt-title">剧本诊断优化</span><span class="mt-sub">C 端 · 逐场找问题</span>
+      </div>
+      <div class="mode-tab" role="tab" aria-selected="false" data-mode="batch" tabindex="0">
+        <i>📚</i><span class="mt-title">批量审稿筛选</span><span class="mt-sub">B 端 · 海量初筛</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="records">
+    <div class="records-head">
+      <h2>评估记录</h2>
+      <span class="spacer"></span>
+      <div class="chip-row" id="recFilter">
+        <button type="button" class="chip" aria-pressed="true" data-v="all">全部</button>
+        <button type="button" class="chip" aria-pressed="false" data-v="diagnose">剧本诊断优化</button>
+        <button type="button" class="chip" aria-pressed="false" data-v="batch">批量审稿筛选</button>
+      </div>
+    </div>
+    <div class="card"><div id="recList"></div></div>
+  </div>
+</main>
+
+<script src="../js/mock.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../neo/neo.js"></script>
+<script src="../js/entry.js"></script>
+<script src="flat.js"></script>
+</body>
+</html>

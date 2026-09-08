@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>评估结果 · 剧本评估 Agent</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/eval.css">
+<link rel="stylesheet" href="../neo/neo.css">
+<link rel="stylesheet" href="flat.css">
+</head>
+<body data-page="result">
+<header id="topbar"></header>
+
+<main class="res-shell">
+  <div class="res-head">
+    <div class="wtabs" role="tablist" aria-label="评估结果" id="wtabs"></div>
+    <span class="spacer"></span>
+    <span class="hint-inline" id="resMeta"></span>
+  </div>
+
+  <div class="res-body" id="workBody">
+    <div class="work-panel" id="panelBatch"></div>
+
+    <div class="work-panel" id="panelReport">
+      <div class="annot-bar res-pick" id="repBar" hidden>
+        <span class="lb">选择剧本</span>
+        <select id="repPick"></select>
+        <span class="spacer"></span>
+        <span class="hint-inline">Demo 中各剧本的报告明细复用同一份示例数据</span>
+      </div>
+      <div id="repHost" style="flex:1;min-height:0;overflow:auto"></div>
+    </div>
+
+    <div class="work-panel" id="panelAnnot">
+      <div class="annot-bar res-pick" id="annotBar" hidden>
+        <span class="lb">选择剧本</span>
+        <select id="annotPick"></select>
+        <span class="spacer"></span>
+        <span class="hint-inline">B 端只读标注：给出问题与判断依据，不做 AI 改写</span>
+      </div>
+      <div id="annotHost" style="flex:1;min-height:0;display:flex"></div>
+    </div>
+
+    <div class="work-panel" id="panelDiff">
+      <div id="fixNote"></div>
+      <div id="diffHost" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
+    </div>
+  </div>
+</main>
+
+<script src="../js/mock.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../neo/neo.js"></script>
+<script src="../js/report.js"></script>
+<script src="../neo/report-neo.js"></script>
+<script src="../js/annot.js"></script>
+<script src="../js/diffview.js"></script>
+<script src="../neo/result-page.js"></script>
+<script src="flat.js"></script>
+</body>
+</html>
