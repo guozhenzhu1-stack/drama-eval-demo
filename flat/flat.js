@@ -118,8 +118,117 @@ function noFix(root) {
   });
 }
 
+/* ---------- 5. 对话框按参考稿对齐：点赞点踩 / 可展开的进度清单 / 标题栏 ---------- */
+/* 说话的组件是共享的（flow.js、js/batch.js 的 say()），这里只在渲染后补交互 */
+const THUMB = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10.5V20H4.6A1.6 1.6 0 0 1 3 18.4v-6.3A1.6 1.6 0 0 1 4.6 10.5H7Z"/><path d="M7 10.5l4-6.2a1.4 1.4 0 0 1 2.6.75V9.4h4.2a2 2 0 0 1 2 2.45l-1.2 5.9A2 2 0 0 1 16.6 20H7"/></svg>`;
+
+const STEP_NOTE = {
+  '结构化解析与去重指纹计算': '先把每份稿子拆成集 / 场 / 人物，再算一份去重指纹，用来找洗稿与重复投递',
+  'AI 生成特征与洗稿比对': '比对句式分布与桥段序列，判断是否 AI 批量生成或改写自同一母本',
+  '剧本结构化解析': '已按集 / 场 / 人物把剧本拆成结构，后面每一步的定位都落在这套坐标上',
+  '分集分维度问题检测': '逐集逐场比对所选维度的检测规则，命中就记下「第几集 · 第几场 · 哪句台词」',
+  '分维度问题检测': '按所选维度逐段比对检测规则，命中就记下位置与判断依据',
+  '分维度质量评估': '按维度给每份稿子评分，用于后面的分级与拦截判断',
+  '合规规则库比对': '与平台常见退改项规则库比对，只标风险点，本期不改内容',
+  '自定义审稿要求匹配': '把你填的审稿口径当成额外规则跑一遍，不满足的单独标出来',
+  '定向投稿匹配度计算': '按题材、节奏与卡点密度估算与目标平台的匹配度',
+  '汇总问题清单': '按维度归并去重，严重度高的排在前面',
+  '汇总评估报告': '结论、得分与逐条依据合成一份可导出的报告',
+  '汇总批量结论': '按分级与拦截结论汇总成一张可筛选的清单'
+};
+const stepNote = t => {
+  const k = Object.keys(STEP_NOTE).find(x => t.includes(x));
+  return k ? STEP_NOTE[k] : 'Demo 中这一步为模拟执行，不产出中间文件';
+};
+
+function chatSkin(root) {
+  /* 进度清单：多步的那种不用气泡承载，每行可点开看这步做了什么 */
+  root.querySelectorAll('.steps:not([data-sx])').forEach(box => {
+    box.dataset.sx = '1';
+    const msg = box.closest('.msg');
+    const rows = [...box.querySelectorAll('.step')];
+    if (rows.length < 2) return;                  /* 批量页只有一行滚动进度，保持原样 */
+    if (msg) {
+      msg.classList.add('steps-msg');
+      const av = msg.querySelector('.avatar');
+      if (av) av.textContent = '✦';
+    }
+    rows.forEach(st => {
+      const x = document.createElement('i');
+      x.className = 'sx';
+      x.textContent = '›';
+      st.appendChild(x);
+      st.onclick = () => {
+        if (!st.classList.contains('done')) return;
+        const open = st.classList.toggle('open');
+        let n = st.nextElementSibling;
+        if (!n || !n.classList.contains('step-note')) {
+          n = document.createElement('p');
+          n.className = 'step-note';
+          n.textContent = stepNote(st.textContent);
+          st.after(n);
+        }
+        n.hidden = !open;
+      };
+    });
+  });
+
+  /* 回复下方的点赞 / 点踩 */
+  root.querySelectorAll('#chatScroll .msg.ai:not([data-fb])').forEach(m => {
+    const b = m.querySelector('.bubble');
+    if (!b || b.querySelector('.steps') || b.querySelector('.card')) return;
+    m.dataset.fb = '1';
+    const row = document.createElement('div');
+    row.className = 'msg-fb';
+    row.innerHTML = ['up', 'down'].map(k =>
+      `<button class="fb-btn" type="button" data-fb="${k}" aria-pressed="false"
+        title="${k === 'up' ? '这条回复有用' : '这条回复没帮上忙'}">${THUMB}</button>`).join('');
+    m.appendChild(row);
+    $$('.fb-btn', row).forEach(btn => {
+      btn.onclick = () => {
+        const on = btn.getAttribute('aria-pressed') === 'true';
+        $$('.fb-btn', row).forEach(o => o.setAttribute('aria-pressed', 'false'));
+        btn.setAttribute('aria-pressed', on ? 'false' : 'true');
+        if (on) return;
+        say(btn.dataset.fb === 'up' ? '已记下：这条回复有用' : '已记下：会用来改进后续的评估口径');
+      };
+    });
+  });
+}
+
+/* 标题栏：返回胶囊 + 居中标题 + 右侧 » 收起工作台 */
+function chatHead() {
+  const hd = $('.pane-chat .pane-head');
+  if (!hd || hd.dataset.ph) return;
+  hd.dataset.ph = '1';
+  const h3 = $('h3', hd);
+  if (h3) {
+    const mid = document.createElement('span');
+    mid.className = 'ph-mid';
+    hd.insertBefore(mid, h3);
+    mid.appendChild(h3);
+    $$(':scope > .tag', hd).forEach(t => mid.appendChild(t));
+  }
+  const studio = $('.studio');
+  if (!studio) return;
+  const x = document.createElement('button');
+  x.type = 'button';
+  x.className = 'ph-x';
+  const label = w => (w ? '恢复左右分栏' : '收起右侧工作台，让对话占满');
+  x.textContent = '»';
+  x.title = label(false);
+  x.onclick = () => {
+    const w = studio.classList.toggle('wide');
+    x.textContent = w ? '«' : '»';
+    x.title = label(w);
+  };
+  hd.appendChild(x);
+}
+
 function watchReports() {
-  const tick = () => { pdfOnly(document); noFix(document); };
+  const tick = () => { pdfOnly(document); noFix(document); chatSkin(document); };
+  chatHead();
   tick();
   let queued = false;
   new MutationObserver(() => {

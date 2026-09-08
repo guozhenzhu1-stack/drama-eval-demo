@@ -471,3 +471,90 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .fix-summary,
 [role="tab"][data-rk="diff"],
 [data-res-jump="diff"] { display: none !important; }
+
+/* ================================================================
+   16. 对话框按参考稿对齐
+   气泡不带头像与描边（AI 浅灰 / 我 蓝底），回复下方给点赞点踩，
+   进度改成可展开的清单（只有那条消息保留一个 ✦ 头像），标题居中
+   ================================================================ */
+.chat-scroll { gap: 20px; padding: 24px 22px 30px; }
+.msg { gap: 10px; }
+.msg.ai { flex-wrap: wrap; }
+/* 常规消息不出头像：参考稿里只有进度清单那条有 ✦ */
+.msg .avatar { display: none; }
+.msg .bubble {
+  max-width: 78%; padding: 13px 17px; border: 0; border-radius: 12px;
+  font-size: 14.5px; line-height: 1.85;
+}
+.msg.ai .bubble { background: #f3f4f6; border: 0; border-radius: 12px; }
+.msg.me .bubble { background: var(--accent); color: #fff; }
+.msg.me .bubble .hint-inline, .msg.me .bubble .muted { color: rgba(255, 255, 255, .78); }
+.msg .bubble.plain { background: transparent; padding: 2px 0; }
+.msg .bubble ul { margin: 6px 0 0; padding-left: 20px; }
+.msg .bubble li + li { margin-top: 3px; }
+.msg .bubble .hint-inline { font-size: 13px; }
+
+/* 点赞 / 点踩：跟在回复下方，鼠标移上去才变清晰 */
+.msg-fb { flex: 0 0 100%; display: flex; gap: 2px; margin: 6px 0 0 2px; }
+.fb-btn {
+  width: 28px; height: 28px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 8px; background: none; color: var(--text-muted);
+  opacity: .45; cursor: pointer; transition: opacity .15s, color .15s, background .15s;
+}
+.msg:hover .fb-btn { opacity: .8; }
+.fb-btn svg { width: 17px; height: 17px; }
+.fb-btn[data-fb="down"] svg { transform: rotate(180deg); }
+.fb-btn:hover { background: var(--surface-2); color: var(--text-primary); opacity: 1; }
+.fb-btn[aria-pressed="true"] { color: var(--accent); opacity: 1; }
+
+/* 进度清单：不用气泡承载，✦ 头像 + 一行一步，点一行看这步做了什么 */
+.msg.steps-msg .avatar {
+  display: grid; width: 28px; height: 28px; border-radius: 50%; border: 0;
+  background: linear-gradient(140deg, #ece9ff, #dde8ff); color: #6d4dff;
+  font-size: 13px; font-weight: 400;
+}
+.msg.steps-msg .bubble { max-width: 100%; padding: 3px 0 0; background: transparent; }
+.msg.steps-msg .bubble > div:first-child { margin-bottom: 8px; font-size: 13px; color: var(--text-muted); }
+.msg.steps-msg .prog { display: none; }
+.steps { gap: 1px; margin-top: 0; }
+.step {
+  gap: 10px; padding: 5px 8px; margin-left: -8px; border-radius: 8px;
+  font-size: 14px; color: var(--text-muted);
+}
+.step .ic { width: 16px; font-size: 13px; }
+.step.done { color: var(--text-secondary); }
+.step.done .ic { color: var(--accent); }
+.step.done { cursor: pointer; }
+.step.done:hover { background: var(--surface-2); }
+.step .sx { margin-left: 2px; font-style: normal; font-size: 14px; color: var(--text-muted); transition: transform .15s; }
+.step.open .sx { transform: rotate(90deg); }
+.step-note {
+  margin: 2px 0 6px 26px; font-size: 13px; line-height: 1.75;
+  color: var(--text-muted); max-width: 620px;
+}
+
+/* 标题栏：返回做成胶囊按钮，标题居中，右侧 » 收起工作台 */
+.pane-chat .pane-head { position: relative; height: 52px; padding: 0 12px; }
+.pane-chat .pane-head .btn-ghost {
+  height: 32px; padding: 0 12px; border: 1px solid var(--border);
+  border-radius: 9px; background: var(--surface-1); font-size: 13px;
+}
+.pane-chat .pane-head .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.ph-mid {
+  position: absolute; left: 50%; top: 0; height: 100%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; white-space: nowrap; pointer-events: none;
+}
+.ph-mid h3 { font-size: 15px; font-weight: 700; }
+.ph-x {
+  margin-left: auto; width: 30px; height: 30px; flex: none; border: 0; border-radius: 8px;
+  background: none; color: var(--text-muted); font: inherit; font-size: 17px; line-height: 1; cursor: pointer;
+}
+.ph-x:hover { background: var(--surface-2); color: var(--text-primary); }
+.studio.solo .ph-x { display: none; }
+/* 参考稿的标题栏是干净的：右侧那句流程说明不再出 */
+.studio.solo .pane-head::after { display: none !important; }
+
+/* » 收起右栏：对话占满（与 solo 同一套版式，但由用户自己控制） */
+.studio.wide > .splitter, .studio.wide > .pane-work { display: none; }
+.studio.wide > .pane-chat { flex: 1 1 auto; width: auto !important; border-right: 0; }
+.studio.wide .pane-body > .chat-scroll, .studio.wide .composer { max-width: 880px; margin: 0 auto; width: 100%; }
