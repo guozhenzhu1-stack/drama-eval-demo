@@ -492,3 +492,18 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .res-head .wtab[aria-selected="true"] { font-weight: 700; }
 
 
+
+/* ================================================================
+   15. 本期只做问题检测：修改建议与所有改稿入口都不显示
+   共享组件（report-neo.js / annot.js / result-page.js）由风格 A 与 v1 共用，
+   不能改其源码：flat.js 会在渲染后摘掉这些节点，这里先用 CSS 压住避免闪一下
+   ================================================================ */
+.di-fix,
+.cmp-fix,
+#fixBook,
+#fixEp,
+[data-act="fix"],
+#selBar,
+.fix-summary,
+[role="tab"][data-rk="diff"],
+[data-res-jump="diff"] { display: none !important; }

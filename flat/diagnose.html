@@ -48,7 +48,7 @@
     <div class="pane-body"><div class="chat-scroll" id="chatScroll"></div></div>
     <div class="composer">
       <div id="quoteRef"></div>
-      <textarea id="chatInput" rows="2" placeholder="继续提问，例如：伏笔怎么样 / 有没有合规风险 / 整本修复"></textarea>
+      <textarea id="chatInput" rows="2" placeholder="继续提问，例如：伏笔怎么样 / 有没有合规风险 / 第 3 集有什么问题"></textarea>
       <div class="composer-bar">
         <span class="hint-inline" id="chatHint"></span>
         <span class="spacer"></span>
@@ -70,9 +70,8 @@
     </div>
     <div class="pane-body" id="workBody" style="display:flex;flex-direction:column">
       <div class="work-panel active" id="panelReport"></div>
-      <!-- 标注与对比不出 tab：仅作为数据挂载点，供对话内改稿与结果页共享同一份数据 -->
+      <!-- 标注不出 tab：仅作为数据挂载点，供结果页共享同一份问题数据 -->
       <div class="work-panel" id="panelAnnot" hidden></div>
-      <div class="work-panel" id="panelDiff" hidden></div>
     </div>
   </main>
 </div>
@@ -83,7 +82,6 @@
 <script src="../js/report.js"></script>
 <script src="../neo/report-neo.js"></script>
 <script src="../js/annot.js"></script>
-<script src="../js/diffview.js"></script>
 <script src="flow.js"></script>
 <script src="flat.js"></script>
 </body>

@@ -3,15 +3,17 @@
      ≤9 集（片段 / 单集 / 少集）→ 对话框内直接给出评估结果，右栏不出现
      ≥10 集 + 快速评估          → 评估报告直接摊在对话框右边
      ≥10 集 + 深度评估          → 对话里给「查看完整评估结果」，正文在新页面
+   本期只做「问题检测与展示」：不出修改建议，也不提供任何改稿入口（一键修复 / 按建议
+   改写 / 划选下指令 / 修改对比），FIXLOG 恒为空。
    替代 js/diagnose.js。顶层声明不能包进 IIFE：neo.js 的 neoStudio 桥以裸名读取
-   SCRIPT / FIXLOG / annot / say / CHOSEN / refreshDiff / updateCounters
+   SCRIPT / FIXLOG / annot / say / CHOSEN / updateCounters
    ================================================================ */
 renderTopbar('剧本诊断优化');
 initSplitter($('#splitter'), $('#paneChat'), { min: 380, max: 720 });
-snapshotOrig(SCRIPT);
 
+/* 本期不改稿：FIXLOG 恒为空，仅为 neoStudio 桥与结果页保留同名全局 */
 const FIXLOG = [];
-let annot = null, diff = null;
+let annot = null;
 let CHOSEN = { dims: DEFAULT_DIMS, platforms: [] };
 let FLOW = '';                                  /* inline | quick | deep */
 const chat = $('#chatScroll');
@@ -148,11 +150,12 @@ async function runEval() {
     : `深度评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，共 <b>${c.issues} 处</b>问题：
        致命 ${c.p0}、严重 ${c.p1}、一般 ${c.p2}、轻微 ${c.p3}。
        <ul>
-         <li>最该先改的是第 6 集「31% 股权凭空落地」（P0），它决定观众会不会觉得结局是硬翻盘。</li>
+         <li>最该先看的是第 6 集「31% 股权凭空落地」（P0），它决定观众会不会觉得结局是硬翻盘。</li>
          <li>其次是伏笔维度 ${SCRIPT.dimReports.find(r => r.dim === 'seed').score} 分：3 条钩子级伏笔全部没闭环。</li>
-         <li>第 3 集泼咖啡属平台常见退改点，建议改成证据反制。</li>
+         <li>第 3 集泼咖啡属平台常见退改点，命中合规规则库。</li>
        </ul>
-       评估报告与分集问题标注都在下面这个入口里，点开是一个新页面；要我直接动手就说「整本修复」。`);
+       评估报告与分集问题标注都在下面这个入口里，点开是一个新页面。
+       <br><span class="hint-inline">本期只做问题检测与展示，不产出改写建议、也不代改剧本。</span>`);
 }
 
 const repOpts = () => ({
@@ -187,26 +190,30 @@ function showResult() {
   $('#tabReport').hidden = true;
   $('#panelReport').innerHTML = '';
   renderReport($('#panelReport'), SCRIPT, repOpts());   /* 只产出对话里的结果摘要条 */
+  /* canFix: false —— 本期只做检测：标注里不出修改建议，也不出一键修复 */
   annot = createAnnot($('#panelAnnot'), SCRIPT, {
-    canFix: true, dims: CHOSEN.dims,
-    onFix: doFix, onChange: updateCounters,
-    onEdit: () => refreshDiff()
+    canFix: false, dims: CHOSEN.dims, onChange: updateCounters
   });
   updateCounters();
 }
 
 /* 快速评估里点「升级为深度评估」：右栏收起，改成结果页入口 */
+/* neo.js 在调用这里之前已经把摘要条贴到了「快速评估完成」那条旧消息上，
+   先摘掉它，再说新回复、再重算 —— placeResBar 会把入口挂到最新那条回复下方 */
 window.neoOnUpgrade = function () {
   FLOW = 'deep';
   document.documentElement.dataset.flow = 'deep';
-  showResult();
+  const old = document.querySelector('#neoResBar');
+  if (old) old.remove();
   say('ai', `已按<b>深度评估</b>重新精读全本：在原评估报告之上补出<b>分集问题标注</b>，
-    每处问题都落到「第几集 · 第几场 · 哪句台词」，并给判断依据与改写建议。
-    完整结果改在新页面看，入口就在下面这条摘要里。`);
+    每处问题都落到「第几集 · 第几场 · 哪句台词」，并给出判断依据。
+    完整结果改在新页面看，入口就在下面。`);
+  showResult();
+  scrollChat();
 };
 
 /* ---------- ≤9 集：结果直接回在对话框里 ---------- */
-/* 小体量不出综合评分与评级：只按维度列问题 + 判断依据 + 修改建议 */
+/* 小体量不出综合评分与评级：只按维度列问题 + 判断依据 */
 const SMALL_STEPS = ['剧本结构化解析', '分维度问题检测', '合规规则库比对', '汇总问题清单'];
 
 function covered() {
@@ -230,16 +237,14 @@ const dimsOf = list => {
     .map(d => ({ dim: d, list: list.filter(i => i.dim === d) }));
 };
 
+/* 只出问题与依据：本期不给修改建议，也不给改写入口 */
 function issHtml(i) {
   return `
   <div class="fres-iss" data-iss="${i.id}">
     <div class="fi-top"><i class="sev sev-${i.sev}">${i.sev}</i>
-      <b>第 ${i.ep} 集｜${esc(i.title)}</b>
-      <span class="spacer"></span>
-      <button class="fi-btn" type="button" data-fixid="${i.id}">按建议改写</button></div>
+      <b>第 ${i.ep} 集｜${esc(i.title)}</b></div>
     <div class="fi-q">原文「${esc(i.quote)}」</div>
     <div class="fi-why"><b>判断依据：</b>${esc(i.why)}</div>
-    <div class="fi-fix"><b>修改建议：</b>${esc(i.fix)}</div>
   </div>`;
 }
 
@@ -266,7 +271,7 @@ function inlineResult(list) {
     ${rest.length ? `<button class="fres-more" type="button" id="fresMore">展开其余 ${rest.length} 个维度 · ${restN} 处问题</button>
       <div id="fresRest" hidden>${rest.map(dimBlock).join('')}</div>` : ''}
     <div class="fres-foot">这个体量不用再开报告页：以上就是全部问题与依据。
-      想让我直接动手，说「全部改掉」或点单条上的「按建议改写」。</div>
+      本期只做问题检测与展示，暂不产出修改建议、也不代改剧本。</div>
   </div>`;
 }
 
@@ -284,127 +289,26 @@ async function runSmall() {
   if (more) more.onclick = () => { $('#fresRest', mm).hidden = false; more.remove(); scrollChat(); };
 }
 
-/* ---------- 改稿（对话内直接改；深度评估下同时同步给结果页） ---------- */
+/* ---------- 计数：本期只有「待看问题数」，没有改稿产物 ---------- */
 function updateCounters() {
-  const open = ALL_ISSUES().filter(i => !i.fixed && !i.ignored && CHOSEN.dims.includes(i.dim)).length;
-  const c = $('#tabIssueCnt'), d = $('#tabDiffCnt'), t = $('#tabDiff');
+  const open = ALL_ISSUES().filter(i => !i.ignored && CHOSEN.dims.includes(i.dim)).length;
+  const c = $('#tabIssueCnt'), t = $('#tabDiff');
   if (c) c.textContent = open;
-  if (d) d.textContent = FIXLOG.length;
-  if (t) t.hidden = !FIXLOG.length;
-}
-
-function applyFix(i) {
-  if (i.fixed || i.ignored) return false;
-  const ep = SCRIPT.episodes.find(e => e.no === i.ep);
-  const bi = ep.blocks.findIndex(b => b.x.includes(i.quote));
-  if (bi < 0) return false;
-  const before = ep.blocks[bi].x;
-  ep.blocks[bi].x = before.replace(i.quote, () => i.after);
-  i.fixed = true;
-  FIXLOG.push({ id: i.id, ep: i.ep, bi, dim: i.dim, title: i.title, sev: i.sev,
-    before, after: ep.blocks[bi].x, adopted: false });
-  return true;
-}
-
-function refreshDiff() {
-  if (!diff) diff = createDiff($('#panelDiff'), SCRIPT, FIXLOG, { onAdopt: doAdopt, onRevert: doRevert });
-  else diff.render();
-  updateCounters();
-}
-
-const diffHtml = i => `
-  <div class="fdiff">
-    <div class="fd-row del"><em>改前</em><span>${esc(i.quote)}</span></div>
-    <div class="fd-row add"><em>改后</em><span>${esc(i.after)}</span></div>
-  </div>`;
-
-/* 对话内的单条改写（≤9 集路径的主要改稿方式） */
-chat.addEventListener('click', e => {
-  const b = e.target.closest('[data-fixid]');
-  if (!b) return;
-  const i = ALL_ISSUES().find(x => x.id === b.dataset.fixid);
-  if (!i) return;
-  if (!applyFix(i)) { toast('这处已经改过了'); return; }
-  b.disabled = true; b.textContent = '已改写';
-  say('me', `按建议改写：第 ${i.ep} 集「${i.title}」`);
-  say('ai', `已改完这处（${dimName(i.dim)} · ${i.sev}）：` + diffHtml(i));
-  refreshDiff();
-});
-
-function fixMany(targets, label) {
-  const done = targets.filter(applyFix);
-  if (!done.length) { say('me', label); say('ai', '当前范围内没有待改写的问题了。'); return; }
-  say('me', label);
-  $$('[data-fixid]', chat).forEach(b => {
-    if (done.some(i => i.id === b.dataset.fixid)) { b.disabled = true; b.textContent = '已改写'; }
-  });
-  const dims = [...new Set(done.map(i => i.dim))], eps = [...new Set(done.map(i => i.ep))].sort((a, b) => a - b);
-  say('ai', `已改完 <b>${done.length} 处</b>，覆盖 ${dims.length} 个维度（${dims.map(dimName).join('、')}）、第 ${eps.join('、')} 集。`
-    + done.slice(0, 3).map(diffHtml).join('')
-    + (done.length > 3 ? `<div class="hint-inline">另有 ${done.length - 3} 处改动，形式相同。</div>` : '')
-    + (FLOW === 'deep' ? `<div class="hint-inline">全部改前改后可在结果页的「修改对比」里逐条采纳或撤销。</div>
-        <button class="res-jump" type="button" data-res-jump="diff">在结果页查看修改对比 <i>↗</i></button>` : ''));
-  if (annot) annot.render();
-  refreshDiff();
-}
-
-function doFix(scope, payload) {
-  const pool = () => ALL_ISSUES().filter(i => !i.fixed && !i.ignored && CHOSEN.dims.includes(i.dim));
-  if (scope === 'issue') return fixMany([payload], `修复这个问题：${payload.title}`);
-  if (scope === 'ep') {
-    const no = typeof payload === 'number' ? payload : (annot && annot.state.ep);
-    return fixMany(pool().filter(i => i.ep === no), `第 ${no} 集一键修复`);
-  }
-  return fixMany(pool(), '整本一键修复');
-}
-
-function doAdopt(scope, payload) {
-  let n = 0;
-  const mark = l => { if (!l.adopted) { l.adopted = true; n++; } };
-  if (scope === 'change') FIXLOG.filter(l => l.ep === payload.ep && l.bi === payload.i).forEach(mark);
-  else if (scope === 'ep') FIXLOG.filter(l => l.ep === payload).forEach(mark);
-  else FIXLOG.forEach(mark);
-  if (!n) { toast('该范围内的修改已全部采纳'); return; }
-  toast(`已采纳 ${n} 处修改`);
-  say('ai', `已采纳 <b>${n} 处</b>修改${scope === 'book' ? '（整本）' : scope === 'ep' ? `（第${payload}集）` : ''}，
-    采纳后的正文可以在「修改对比」右上角导出。`);
-  if (diff) diff.render();
-}
-
-function doRevert(payload) {
-  const ep = SCRIPT.episodes.find(e => e.no === payload.ep);
-  ep.blocks[payload.i].x = ep.orig[payload.i].x;
-  const idx = FIXLOG.findIndex(l => l.ep === payload.ep && l.bi === payload.i);
-  if (idx > -1) {
-    const iss = ALL_ISSUES().find(i => i.id === FIXLOG[idx].id);
-    if (iss) iss.fixed = false;
-    FIXLOG.splice(idx, 1);
-  }
-  toast('已撤销该处修改');
-  if (annot) annot.render();
-  refreshDiff();
+  if (t) t.hidden = true;                       /* 修改对比不再产出 */
 }
 
 /* ---------- 对话路由 ---------- */
 const jump = (k, t) => `<button class="res-jump" type="button" data-res-jump="${k}">在结果页查看${t} <i>↗</i></button>`;
-const upsell = () => (typeof window.neoUpsellHtml === 'function' ? window.neoUpsellHtml('chat') : '');
 
 function answer(t) {
   const ep = t.match(/第\s*(\d+)\s*集/);
 
-  if (/整本|全部|所有|都改|全改/.test(t) && /修复|改/.test(t)) {
-    if (FLOW === 'inline') return fixMany(covered().filter(i => !i.fixed), '全部改掉');
-    if (FLOW === 'quick') return say('ai', `快速评估只产出了评估报告，没有逐场标注，因此还改不了具体台词。` + upsell());
-    return doFix('book');
-  }
-  if (ep && /修复|改/.test(t)) {
-    const no = +ep[1];
-    if (FLOW === 'quick') return say('ai', `快速评估没有逐集标注，改不到具体台词。` + upsell());
-    const pool = (FLOW === 'inline' ? covered() : ALL_ISSUES())
-      .filter(i => i.ep === no && !i.fixed && !i.ignored && CHOSEN.dims.includes(i.dim));
-    if (!pool.length) return say('ai', `第 ${no} 集在本次评估范围内没有待改写的问题。`);
-    return fixMany(pool, `第 ${no} 集一键修复`);
-  }
+  /* 本期只做检测：所有改稿类指令统一说明边界，不再动剧本 */
+  if (/修复|改写|改稿|润色|重写|都改|全改|帮我改/.test(t))
+    return say('ai', `本期只做<b>剧本问题检测与展示</b>，不产出修改建议、也不代改剧本。
+      我可以把问题定位、判断依据和严重度给全${FLOW === 'deep' ? '，并落到「第几集 · 第几场 · 哪句台词」' : ''}，
+      改写留给你自己拿主意。`);
+
   if (ep) {
     const no = +ep[1];
     const list = (FLOW === 'inline' ? covered() : ALL_ISSUES()).filter(i => i.ep === no && !i.ignored);
@@ -421,7 +325,7 @@ function answer(t) {
   if (/合规|风险|过审/.test(t)) {
     const r = SCRIPT.dimReports.find(x => x.dim === 'risk');
     return say('ai', `合规维度 <b>${r.score} 分</b>，无涉政涉黄内容。唯一风险点是第 3 集当众泼咖啡后无制止无后果，
-      属平台常见退改点，建议改成证据反制——爽感其实更强。`
+      命中规则库里的平台常见退改项。`
       + (FLOW === 'deep' ? jump('report', '合规性评估') : ''));
   }
   if (/报告|评级|总结|得分|怎么样/.test(t)) {
@@ -429,7 +333,7 @@ function answer(t) {
       const list = covered(), ds = dimsOf(list);
       return say('ai', `这次体量小，只给了问题定位、没有出综合评分：${
         ds.length ? `问题集中在<b>${ds.map(r => dimName(r.dim)).join('、')}</b>，共 ${list.length} 处，`
-                  : ''}逐条依据都在上面那条结果里，想让我动手就说「全部改掉」。`);
+                  : ''}逐条依据都在上面那条结果里。`);
     }
     const base = `综合 <b>${SCRIPT.grade} 级 / ${SCRIPT.score} 分</b>。
       最强项是格式规范（88）与台词（76），最弱是伏笔（52）与逻辑（55）。`;
@@ -439,10 +343,10 @@ function answer(t) {
   }
   if (/导出|下载/.test(t)) return say('ai', FLOW === 'inline'
     ? '这次是对话内直接出结果，Demo 暂不提供导出；多集剧本走报告页时可导出 PDF。'
-    : '报告右上角可导出 PDF（Demo 只支持 PDF）；采纳后的正文在「修改对比」里导出。');
+    : '报告右上角可导出 PDF（Demo 只支持 PDF）。');
 
-  say('ai', `我可以做这几件事：<ul>
-    <li>说「全部改掉」或「第 3 集修复」，我直接改</li>
+  say('ai', `本期只做剧本问题检测，我可以做这几件事：<ul>
+    <li>问某一集（如「第 3 集有什么问题」），我按维度列出问题与依据</li>
     <li>问某个维度（如「伏笔怎么样」「有没有合规风险」），我给判断依据</li>
     <li>问「报告怎么样」，我给整体结论</li></ul>`);
 }
@@ -452,7 +356,7 @@ function send() {
   if (!t) return;
   say('me', esc(t));
   $('#chatInput').value = '';
-  if (!FLOW) return say('ai', '先在上面的卡片里确认评估口径与评估深度，评完我就能定位问题、直接改稿了。');
+  if (!FLOW) return say('ai', '先在上面的卡片里确认评估口径与评估深度，评完我就能按维度告诉你问题在哪。');
   answer(t);
 }
 $('#sendBtn').onclick = send;
