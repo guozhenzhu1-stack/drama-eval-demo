@@ -615,7 +615,8 @@ mark.iss.focus {
   box-shadow: inset 0 -22px 0 -1px color-mix(in srgb, var(--mk) 34%, transparent), 0 0 18px var(--mk);
   outline: 1px solid var(--mk);
 }
-.issue-col { width: 352px; background: var(--surface-2); border-left: 1px solid var(--border); }
+/* 问题卡片里有维度 / 严重度 / 原文引用 / 建议改写四段，352px 折行太碎，放宽到 408px */
+.issue-col { width: 408px; background: var(--surface-2); border-left: 1px solid var(--border); }
 :root[data-theme="dark"] .issue-col { background: rgba(255, 255, 255, .02); }
 .dim-group .dg-head .dot { box-shadow: 0 0 10px currentColor; }
 .iss-card {
@@ -1237,11 +1238,29 @@ ins.dv { background: rgba(16, 185, 129, .16); color: #06795a; text-decoration: n
   display: flex; flex-direction: column; min-height: 0;
 }
 .res-head {
-  flex: none; display: flex; align-items: center; gap: var(--sp-3);
-  padding: 0 var(--sp-5); border-bottom: 1px solid var(--border);
+  flex: none; position: relative; display: flex; align-items: center; justify-content: center;
+  gap: var(--sp-3); padding: 0 var(--sp-5); border-bottom: 1px solid var(--border);
   background: var(--surface-1);
 }
 .res-head .wtabs { border-bottom: 0; }
+/* tab 组居中：本次评估的口径说明绝对定位到右侧，不参与居中计算 */
+.res-head .spacer { display: none; }
+.res-head #resMeta { position: absolute; right: var(--sp-5); top: 50%; transform: translateY(-50%); }
+@media (max-width: 1180px) { .res-head #resMeta { display: none; } }
+
+/* 三个 tab 的内容都收进同一个版心并居中 */
+.res-body { --res-max: 1320px; }
+.res-body #repHost > .report { margin-inline: auto; }
+.res-body #panelBatch > .batch,
+.res-body #annotHost,
+.res-body .res-pick,
+.res-body #panelDiff > #fixNote,
+.res-body #panelDiff > #diffHost {
+  width: 100%; max-width: var(--res-max); margin-inline: auto;
+}
+/* 三栏 / 双栏收进版心后左右补边框，读起来是一块完整面板 */
+.res-body #annotHost,
+.res-body #panelDiff > #diffHost { border-inline: 1px solid var(--border); }
 .res-body { flex: 1 1 auto; min-height: 0; }
 .res-body > .work-panel { height: 100%; }
 
