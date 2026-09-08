@@ -213,7 +213,7 @@ window.neoOnUpgrade = function () {
 };
 
 /* ---------- ≤9 集：结果直接回在对话框里 ---------- */
-/* 小体量不出综合评分与评级：只按维度列问题 + 判断依据 */
+/* 小体量不出综合评分与评级，也不摆卡片：按维度用自然语言把问题与判断依据讲完 */
 const SMALL_STEPS = ['剧本结构化解析', '分维度问题检测', '合规规则库比对', '汇总问题清单'];
 
 function covered() {
@@ -223,8 +223,10 @@ function covered() {
     .sort((a, b) => SEVN.indexOf(a.sev) - SEVN.indexOf(b.sev) || a.ep - b.ep);
   return UP.part ? all.slice(0, 2) : all;
 }
-const sevBits = list => SEVN.filter(s => list.some(i => i.sev === s))
-  .map(s => `<i class="sev sev-${s}">${s} ${list.filter(i => i.sev === s).length}</i>`).join('');
+/* 对话里用词不用代号：P0→致命 */
+const SEVW = { P0: '致命', P1: '严重', P2: '一般', P3: '轻微' };
+const sevText = list => SEVN.filter(s => list.some(i => i.sev === s))
+  .map(s => `${SEVW[s]} ${list.filter(i => i.sev === s).length} 处`).join('、');
 /* 维度排序：先看有没有致命级，再看问题条数 —— 不再按维度得分排 */
 const dimsOf = list => {
   const rank = d => {
@@ -237,7 +239,7 @@ const dimsOf = list => {
     .map(d => ({ dim: d, list: list.filter(i => i.dim === d) }));
 };
 
-/* 只出问题与依据：本期不给修改建议，也不给改写入口 */
+/* 深度评估的追问答案仍用小卡片（与结果页一致）；小体量走下面的自然语言 */
 function issHtml(i) {
   return `
   <div class="fres-iss" data-iss="${i.id}">
@@ -248,30 +250,36 @@ function issHtml(i) {
   </div>`;
 }
 
-const dimBlock = g => `
-  <div class="fres-dim">
-    <div class="fd-head"><i class="dot" style="background:${dimColor(g.dim)}"></i>
-      <b>${dimName(g.dim)}</b><em>${g.list.length} 处</em></div>
-    <div class="fres-list">${g.list.map(issHtml).join('')}</div>
-  </div>`;
+/* ---------- 小体量：结果写成自然语言，不出卡片 ---------- */
+/* 一处问题就是一段话：落在第几集 → 原文是哪句 → 我为什么这么判断 */
+const issLine = i => `<p class="fp-i">第 ${i.ep} 集<b>${esc(i.title)}</b>（${SEVW[i.sev]}）。
+  原文是「${esc(i.quote)}」。${esc(i.why)}</p>`;
 
-function inlineResult(list) {
+const DIM_LEAD = ['最要紧的是', '其次是', '再就是', '接着是', '另外是', '还有'];
+const dimProse = (g, idx, total) => {
+  const lead = idx > 1 && idx === total - 1 ? '最后是' : (DIM_LEAD[idx] || '还有');
+  return `<p class="fp-d">${lead}<b>${dimName(g.dim)}</b>这个维度，读到 ${g.list.length} 处问题（${
+    sevText(g.list)}）：</p>` + g.list.map(issLine).join('');
+};
+
+function inlineProse(list) {
+  if (!list.length) return `<div class="fp"><p>按你选的 ${CHOSEN.dims.length} 个维度把这${VOL}（约 ${
+    fmt(UP.words)} 字）读完了，没有读到需要改的地方，这一段可以直接进下一环。</p></div>`;
   const groups = dimsOf(list);
   const head = groups.slice(0, 2), rest = groups.slice(2);
   const restN = rest.reduce((n, g) => n + g.list.length, 0);
   return `
-  <div class="fres">
-    <div class="fres-top">
-      <div class="ft-tx"><b>按 ${CHOSEN.dims.length} 个维度读完，定位到 ${list.length} 处问题</b>
-        <span>${VOL} · ${fmt(UP.words)} 字 · 小体量不出综合评分与评级，只给问题与依据</span></div>
-      <span class="spacer"></span>
-      <span class="ft-sev">${sevBits(list)}</span>
-    </div>
-    ${list.length ? head.map(dimBlock).join('') : '<p class="fres-clean">所选维度内没有读到需要改的问题，这一段可以直接进下一环。</p>'}
-    ${rest.length ? `<button class="fres-more" type="button" id="fresMore">展开其余 ${rest.length} 个维度 · ${restN} 处问题</button>
-      <div id="fresRest" hidden>${rest.map(dimBlock).join('')}</div>` : ''}
-    <div class="fres-foot">这个体量不用再开报告页：以上就是全部问题与依据。
-      本期只做问题检测与展示，暂不产出修改建议、也不代改剧本。</div>
+  <div class="fp">
+    <p>读完了。${VOL}、约 ${fmt(UP.words)} 字，按你选的 ${CHOSEN.dims.length} 个维度过了一遍，
+      一共定位到 <b>${list.length} 处</b>问题，其中${sevText(list)}。体量不大，就不出综合评分和评级了，
+      我直接说问题在哪、以及为什么这么判断。</p>
+    ${head.map((g, i) => dimProse(g, i, groups.length)).join('')}
+    ${rest.length ? `<p class="fp-rest">除此之外，${rest.map(g => dimName(g.dim)).join('、')}${
+        rest.length > 1 ? `这 ${rest.length} 个维度` : '这个维度'}还有 ${restN} 处问题，严重度都更低一些。
+        <button class="fp-more" type="button" id="fresMore">也一并说完</button></p>
+      <div id="fresRest" hidden>${rest.map((g, k) => dimProse(g, k + 2, groups.length)).join('')}</div>` : ''}
+    <p class="fp-foot">以上就是全部问题与判断依据，这个体量不用再单独开报告页。
+      本期只做问题检测与展示，暂不产出修改建议、也不代改剧本。</p>
   </div>`;
 }
 
@@ -284,7 +292,7 @@ async function runSmall() {
   FLOW = 'inline';
   document.documentElement.dataset.flow = 'inline';
   const list = covered();
-  const mm = say('ai', `读完了，按维度把问题列在这儿：` + inlineResult(list));
+  const mm = say('ai', inlineProse(list));
   const more = $('#fresMore', mm);
   if (more) more.onclick = () => { $('#fresRest', mm).hidden = false; more.remove(); scrollChat(); };
 }
@@ -314,6 +322,9 @@ function answer(t) {
     const list = (FLOW === 'inline' ? covered() : ALL_ISSUES()).filter(i => i.ep === no && !i.ignored);
     if (!list.length) return say('ai', `第 ${no} 集不在本次评估范围内${
       FLOW === 'inline' ? `（这次只评了${VOL}）` : `，示例数据只展开了前 ${SCRIPT.meta.parsedEps} 集`}。`);
+    if (FLOW === 'inline')
+      return say('ai', `<div class="fp"><p>第 ${no} 集我读到 <b>${list.length} 处</b>问题（${sevText(list)}），逐条说：</p>
+        ${list.map(issLine).join('')}</div>`);
     return say('ai', `第 ${no} 集有 <b>${list.length} 处</b>问题：` + list.map(issHtml).join('')
       + (FLOW === 'deep' ? jump('annot', '分集问题标注') : ''));
   }

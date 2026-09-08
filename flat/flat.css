@@ -362,55 +362,15 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 
 /* ================================================================
    10. 对话内的评估结果（≤9 集路径）
+   小体量走自然语言（见第 12 节）；这里只留深度评估追问时用的小卡片
    ================================================================ */
-.fres { margin-top: 10px; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
-.fres-top {
-  display: flex; align-items: center; gap: 10px; padding: 11px 13px;
-  background: var(--surface-2); border-bottom: 1px solid var(--border);
-}
-.fres-top .grade { flex: none; }
-.fres-top .ft-tx { display: grid; gap: 2px; min-width: 0; }
-.fres-top .ft-tx b { font-size: 13.5px; }
-.fres-top .ft-tx span { font-size: 11.5px; color: var(--text-muted); }
-.fres-top .ft-sev { flex: none; display: flex; gap: 4px; }
-.fres-say { margin: 0; padding: 11px 13px; font-size: 13px; line-height: 1.75; }
-.fres .dim-bars { padding: 0 13px 11px; display: grid; gap: 7px; }
-.fres-list { padding: 0 13px; display: grid; gap: 8px; }
-.fres-list:last-of-type { padding-bottom: 12px; }
 .fres-iss { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 9px 11px; }
+.fres-iss + .fres-iss { margin-top: 8px; }
+.fres-iss:first-child { margin-top: 8px; }
 .fres-iss .fi-top { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
 .fres-iss .fi-top b { font-size: 13px; font-weight: 650; }
-.fi-btn {
-  flex: none; height: 24px; padding: 0 10px; border: 1px solid var(--border-strong);
-  border-radius: 999px; background: var(--surface-1); color: var(--text-secondary);
-  font: inherit; font-size: 12px; cursor: pointer;
-}
-.fi-btn:hover { border-color: var(--accent); color: var(--accent); }
-.fi-btn:disabled { border-color: var(--good-line); background: var(--good-wash); color: var(--good-text); cursor: default; }
 .fres-iss .fi-q { font-size: 12.5px; color: var(--text-secondary); }
-.fres-iss .fi-why, .fres-iss .fi-fix { margin-top: 4px; font-size: 12.5px; color: var(--text-secondary); }
-.fres-iss .fi-fix { color: var(--text-primary); }
-.fres-more {
-  margin: 8px 13px 0; padding: 7px 0; width: calc(100% - 26px);
-  border: 1px dashed var(--border-strong); border-radius: var(--r-sm);
-  background: var(--surface-1); color: var(--text-secondary); font: inherit; font-size: 12.5px; cursor: pointer;
-}
-.fres-more:hover { border-color: var(--accent); color: var(--accent); }
-.fres-foot {
-  margin-top: 10px; padding: 9px 13px; border-top: 1px solid var(--border);
-  background: var(--surface-2); font-size: 11.5px; color: var(--text-muted);
-}
-/* 改前 / 改后 */
-.fdiff { margin-top: 8px; display: grid; gap: 6px; }
-.fd-row { display: flex; gap: 8px; font-size: 12.5px; line-height: 1.7; }
-.fd-row em {
-  flex: none; font-style: normal; font-size: 11px; height: 18px; padding: 0 6px;
-  border-radius: 4px; line-height: 18px;
-}
-.fd-row.del em { background: #fdeaea; color: var(--critical); }
-.fd-row.add em { background: var(--good-wash); color: var(--good-text); }
-.fd-row.del span { color: var(--text-muted); text-decoration: line-through; }
-.msg.me .fd-row.del em, .msg.me .fd-row.add em { background: rgba(255, 255, 255, .2); color: #fff; }
+.fres-iss .fi-why { margin-top: 4px; font-size: 12.5px; color: var(--text-secondary); }
 
 /* 全宽对话时右上角的那句说明：按当前分流改写 */
 :root .studio.solo .pane-head::after { content: '先确认评估口径与评估深度，评完再决定结果怎么展示'; }
@@ -460,21 +420,25 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .samp { height: 32px; font-size: 12.5px; }
 
 /* ================================================================
-   12. 对话内结果（≤9 集）：不给分不给评级，按维度列问题与依据
+   12. 对话内结果（≤9 集）：不给分不给评级，直接用自然语言讲问题与依据
+   气泡里就是几段话，没有卡片、没有描边、没有底色
    ================================================================ */
-.fres-top .ft-tx b { font-size: 13px; font-weight: 650; }
-.fres-dim { padding: 11px 13px 0; }
-.fres-dim + .fres-dim { padding-top: 12px; border-top: 1px solid var(--border); margin-top: 11px; }
-.fres-dim .fd-head { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
-.fres-dim .fd-head .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
-.fres-dim .fd-head b { font-size: 13px; font-weight: 650; }
-.fres-dim .fd-head em {
-  font-style: normal; font-size: 11.5px; color: var(--text-muted);
-  padding: 1px 7px; border-radius: 999px; background: var(--surface-2);
+.fp { margin: 0; }
+.fp > p { margin: 0; }
+.fp > p + p, .fp > div > p { margin-top: 9px; }
+/* 维度开头那句：与上一段留出更大的呼吸 */
+.fp .fp-d { margin-top: 15px; }
+.fp > p:first-child { margin-top: 0; }
+/* 一处问题一段话，稍微退一点色以区别于我说的话 */
+.fp .fp-i { color: var(--text-secondary); }
+.fp .fp-i b { color: var(--text-primary); font-weight: 650; }
+.fp .fp-rest, .fp .fp-foot { margin-top: 14px; }
+.fp .fp-foot { font-size: 12.5px; color: var(--text-muted); }
+.fp-more {
+  padding: 0; border: 0; background: none; font: inherit; color: var(--accent);
+  cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
 }
-.fres-dim .fres-list { padding: 0; }
-.fres-dim:last-of-type { padding-bottom: 12px; }
-.fres-clean { margin: 0; padding: 11px 13px; font-size: 13px; color: var(--text-secondary); }
+.fp-more:hover { text-decoration-thickness: 2px; }
 
 /* ================================================================
    13. 报告导出：Demo 只出 PDF，去掉格式菜单
