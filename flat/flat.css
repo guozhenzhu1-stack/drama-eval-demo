@@ -584,3 +584,40 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .rep-doc .dim-block > .card-head { gap: 9px; }
 .rep-doc .db-sum p { margin: 0; }
 .rep-doc .rtab { padding: 11px 14px; }
+
+
+/* ================================================================
+   18. 评估深度：两段说明文案自己就是选项
+   胶囊组由 flat.js（depthPick）搬进隐藏槽位，这里把 .dn-row 画成可点的选项卡片
+   ================================================================ */
+.neo-depth-fld [data-group="depth"] { display: none; }
+.neo-depth-fld .depth-note {
+  gap: 8px; margin-top: 8px; padding: 0;
+  background: none; border: 0; border-radius: 0;
+}
+.neo-depth-fld .depth-note .dn-row {
+  position: relative; cursor: pointer;
+  padding: 11px 13px 11px 34px; border-left: 0;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--surface-1); transition: border-color .16s, background .16s;
+}
+/* 左侧单选点 */
+.neo-depth-fld .depth-note .dn-row::before {
+  content: ''; position: absolute; left: 13px; top: 14px;
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 1.5px solid var(--axis); background: #fff; transition: .16s;
+}
+.neo-depth-fld .depth-note .dn-row:hover { border-color: var(--accent); background: var(--surface-2); }
+.neo-depth-fld .depth-note .dn-row:hover::before { border-color: var(--accent); }
+.neo-depth-fld .depth-note .dn-row:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+.neo-depth-fld .depth-note .dn-row.on {
+  border-color: var(--accent); background: var(--accent-wash);
+}
+.neo-depth-fld .depth-note .dn-row.on::before {
+  border-color: var(--accent); border-width: 4px; background: #fff;
+}
+.neo-depth-fld .depth-note .dn-row b { font-size: 13px; }
+.neo-depth-fld .depth-note .dn-row.on b { font-weight: 700; }
+.neo-depth-fld .depth-note .dn-row .dn-out { background: var(--surface-3); }

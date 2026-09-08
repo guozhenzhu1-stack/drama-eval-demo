@@ -291,8 +291,67 @@ function chatHead() {
   hd.appendChild(x);
 }
 
+/* ---------- 7. 评估深度：说明文案本身就是选项，去掉上方的胶囊按钮 ---------- */
+/* 字段由 neo.js 的 injectDepth 注入（与风格 A 共用，不能改）：
+   .lbl + [data-group=depth] 胶囊组 + .depth-note 里两段说明。
+   这里把胶囊组整块搬到隐藏槽位——neo.js 的 #briefGo 走 groupValue(card,'depth') 取值，
+   删掉就取不到深度了；搬走同时也去掉了 label 唯一的可聚焦控件，
+   免得点说明块被 label 转发成点胶囊，把选择弹回去 */
+function depthPick(root) {
+  root.querySelectorAll('.neo-depth-fld:not([data-flat-dp])').forEach(fld => {
+    const grp = fld.querySelector('[data-group=depth]');
+    const note = fld.querySelector('.depth-note');
+    const rows = note ? [...note.querySelectorAll('.dn-row')] : [];
+    if (!grp || !rows.length) return;
+    fld.dataset.flatDp = '1';
+
+    const body = fld.closest('.card-body') || fld.parentElement;
+    let slot = body.querySelector('.neo-locked');
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.className = 'neo-locked';
+      slot.hidden = true;
+      body.appendChild(slot);
+    }
+    slot.appendChild(grp);
+
+    const val = r => r.querySelector('b').textContent.trim();
+    const pick = r => {
+      rows.forEach(o => {
+        const on = o === r;
+        o.classList.toggle('on', on);
+        o.setAttribute('aria-checked', String(on));
+        o.tabIndex = on ? 0 : -1;
+      });
+      grp.querySelectorAll('.chip').forEach(c =>
+        c.setAttribute('aria-pressed', String(c.dataset.v === val(r))));
+    };
+
+    note.setAttribute('role', 'radiogroup');
+    note.setAttribute('aria-label', '评估深度');
+    rows.forEach((r, i) => {
+      r.setAttribute('role', 'radio');
+      r.setAttribute('aria-checked', String(r.classList.contains('on')));
+      r.tabIndex = r.classList.contains('on') ? 0 : -1;
+      /* label 会把点击转发给它的表单控件，这里必须拦下默认行为 */
+      r.onclick = e => { e.preventDefault(); pick(r); };
+      r.onkeydown = e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(r); return; }
+        const d = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+        if (!d) return;
+        e.preventDefault();
+        const n = rows[(i + d + rows.length) % rows.length];
+        pick(n); n.focus();
+      };
+    });
+    /* 默认选中项以胶囊组的现值为准（neo.js 默认深度评估） */
+    const cur = grp.querySelector('.chip[aria-pressed=true]');
+    pick(rows.find(r => cur && val(r) === cur.dataset.v) || rows[rows.length - 1]);
+  });
+}
+
 function watchReports() {
-  const tick = () => { pdfOnly(document); noFix(document); slimReport(document); chatSkin(document); };
+  const tick = () => { pdfOnly(document); noFix(document); slimReport(document); chatSkin(document); depthPick(document); };
   chatHead();
   tick();
   let queued = false;
