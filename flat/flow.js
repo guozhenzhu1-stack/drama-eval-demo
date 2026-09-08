@@ -87,29 +87,20 @@ async function runSteps(m, list, ms = 520) {
 }
 
 /* ---------- ≥10 集：输入框上方出 brief 卡片（评估深度由 neo.js 注入） ---------- */
+/* 只留真正会改变评估口径的两项：评估维度 + 评估深度。
+   制作方式 / 目标地区 / 目标投稿平台不再问，能从需求描述里解析就用，解析不到走默认 */
 function briefCard() {
-  const region = P.region || '中国';
-  const tagP = k => P.parsed.includes(k) ? '<span class="parsed">已解析</span>' : '';
   return `
   <div class="card brief" id="briefCard">
-    <div class="card-head">开始前先确认几项，评估口径会按这些设定收紧</div>
+    <div class="card-head">确认评估口径</div>
     <div class="card-body">
-      <label class="fld"><span class="lbl">制作方式 <span class="req">*</span>${tagP('mode')}</span>
-        ${chipGroup('mode', ['真人短剧剧本', 'AI仿真人剧'], { selected: P.mode ? [P.mode] : [] })}</label>
-      <label class="fld"><span class="lbl">付费方式 <span class="req">*</span>${tagP('pay')}</span>
-        ${chipGroup('pay', ['免费', '付费'], { selected: P.pay ? [P.pay] : [] })}</label>
-      <label class="fld"><span class="lbl">目标地区 <span class="req">*</span>${tagP('region')}</span>
-        ${chipGroup('region', ['中国', '北美'], { selected: [region] })}</label>
-      <label class="fld"><span class="lbl">目标投稿平台（选填，可多选）${tagP('platforms')}</span>
-        <span id="pfWrap">${chipGroup('platforms', PLATFORMS[region], { multi: true, selected: P.platforms || [] })}</span></label>
-      <label class="fld"><span class="lbl">评估维度（可多选）${tagP('dims')}</span>
+      <label class="fld"><span class="lbl">评估维度（可多选）</span>
         ${chipGroup('dims', DIMS.map(d => ({ v: d.id, label: d.name, color: d.color })), { multi: true, selected: pickDims() })}</label>
       <label class="fld"><span class="lbl">其他评估要求</span>
         <textarea id="briefMore" rows="2" placeholder="例如：重点看前 3 集付费卡点，帮我核一遍伏笔是否都回收">${esc(P.rest)}</textarea></label>
       <div class="err" id="briefErr" hidden></div>
       <div class="brief-foot">
-        <button class="btn btn-primary" id="briefGo">确认并开始评估 · 预计消耗 ${fmt(COST.diagnose)} 积分</button>
-        <span class="cost">当前余额 ${fmt(CREDITS)}</span>
+        <button class="btn btn-primary" id="briefGo">开始评估</button>
       </div>
     </div>
   </div>`;
@@ -118,33 +109,21 @@ function briefCard() {
 function startBrief() {
   const m = say('ai', `已解析剧本结构：<b>${UP.eps ? UP.eps + ' 集' : '多集'} / 约 ${fmt(UP.words)} 字</b>${
     UP.eps > SCRIPT.meta.parsedEps ? `（示例仅展开前 ${SCRIPT.meta.parsedEps} 集）` : ''}。
-    这个体量建议先定口径再评：${P.parsed.length
-      ? '我从你的描述里提取了部分设定，已预填在下面，确认或改一下即可。'
-      : '还需要确认几项评估口径。'}` + briefCard());
+    这个体量先定一下口径：` + briefCard());
   bindChipGroups(m);
-  $('[data-group=region]', m).addEventListener('click', e => {
-    if (!e.target.closest('.chip')) return;
-    const r = groupValue(m, 'region')[0] || '中国';
-    $('#pfWrap', m).innerHTML = chipGroup('platforms', PLATFORMS[r], { multi: true });
-    bindChipGroups(m);
-  });
   $('#briefGo', m).onclick = () => {
-    const mode = groupValue(m, 'mode')[0], pay = groupValue(m, 'pay')[0], region = groupValue(m, 'region')[0];
     const dims = groupValue(m, 'dims');
-    const miss = [['制作方式', mode], ['付费方式', pay], ['目标地区', region]].filter(x => !x[1]).map(x => x[0]);
     const err = $('#briefErr', m);
-    if (miss.length || !dims.length) {
+    if (!dims.length) {
       err.hidden = false;
-      err.textContent = miss.length ? `请先选择：${miss.join('、')}` : '请至少选择一个评估维度';
+      err.textContent = '请至少选择一个评估维度';
       return;
     }
-    CHOSEN = { mode, pay, region, platforms: groupValue(m, 'platforms'), dims, more: $('#briefMore', m).value.trim() };
-    $('#briefCard').outerHTML = `<div class="brief-done">已确认：<b>${mode} · ${pay} · ${region}</b>
-      ${CHOSEN.platforms.length ? `· 投稿平台 <b>${CHOSEN.platforms.join('、')}</b>` : ''}
-      · 评估维度 <b>${dims.map(dimName).join('、')}</b>
+    CHOSEN = { mode: P.mode || '真人短剧剧本', pay: P.pay || '付费', region: P.region || '中国',
+      platforms: P.platforms || [], dims, more: $('#briefMore', m).value.trim() };
+    $('#briefCard').outerHTML = `<div class="brief-done">已确认：<b>${dims.map(dimName).join('、')}</b>
       · 评估深度 <b>${window.NEO_DEPTH === 'quick' ? '快速评估' : '深度评估'}</b>
-      ${CHOSEN.more ? `<br>补充要求：${esc(CHOSEN.more)}` : ''}
-      <br><span class="hint-inline">已扣除 ${fmt(COST.diagnose)} 积分</span></div>`;
+      ${CHOSEN.more ? `<br>补充要求：${esc(CHOSEN.more)}` : ''}</div>`;
     runEval();
   };
 }
@@ -163,7 +142,8 @@ async function runEval() {
   const c = scoped();
   say('ai', quick
     ? `快速评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，
-       按 ${CHOSEN.dims.length} 个维度给出了得分、评级依据与平台匹配度——报告就在右边，可以直接往下读。
+       按 ${CHOSEN.dims.length} 个维度给出了得分、评级依据${
+         (CHOSEN.platforms || []).length ? '与平台匹配度' : ''}——报告就在右边，可以直接往下读。
        <br><span class="hint-inline">快速评估不逐场精读，因此没有「第几集 · 第几场 · 哪句台词」级别的标注；需要的话可以升级为深度评估。</span>`
     : `深度评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，共 <b>${c.issues} 处</b>问题：
        致命 ${c.p0}、严重 ${c.p1}、一般 ${c.p2}、轻微 ${c.p3}。
@@ -226,11 +206,8 @@ window.neoOnUpgrade = function () {
 };
 
 /* ---------- ≤9 集：结果直接回在对话框里 ---------- */
-const SMALL_STEPS = ['剧本结构化解析', '分维度问题检测', '合规规则库比对', '汇总结论'];
-/* 体量小的样本按覆盖到的问题重算一个分数，其余沿用示例数据 */
-const SUB = UP.part ? { score: 71, grade: 'B' }
-  : UP.eps === 1 ? { score: 68, grade: 'B' }
-  : { score: SCRIPT.score, grade: SCRIPT.grade };
+/* 小体量不出综合评分与评级：只按维度列问题 + 判断依据 + 修改建议 */
+const SMALL_STEPS = ['剧本结构化解析', '分维度问题检测', '合规规则库比对', '汇总问题清单'];
 
 function covered() {
   const all = SCRIPT.episodes.filter(e => e.no <= UP.cover)
@@ -241,16 +218,23 @@ function covered() {
 }
 const sevBits = list => SEVN.filter(s => list.some(i => i.sev === s))
   .map(s => `<i class="sev sev-${s}">${s} ${list.filter(i => i.sev === s).length}</i>`).join('');
+/* 维度排序：先看有没有致命级，再看问题条数 —— 不再按维度得分排 */
 const dimsOf = list => {
-  const ds = [...new Set(list.map(i => i.dim))];
-  return SCRIPT.dimReports.filter(r => ds.includes(r.dim)).sort((a, b) => a.score - b.score);
+  const rank = d => {
+    const own = list.filter(i => i.dim === d)
+      .sort((a, b) => SEVN.indexOf(a.sev) - SEVN.indexOf(b.sev));
+    return [SEVN.indexOf(own[0].sev), -own.length];
+  };
+  return [...new Set(list.map(i => i.dim))]
+    .sort((a, b) => { const x = rank(a), y = rank(b); return x[0] - y[0] || x[1] - y[1]; })
+    .map(d => ({ dim: d, list: list.filter(i => i.dim === d) }));
 };
 
 function issHtml(i) {
   return `
   <div class="fres-iss" data-iss="${i.id}">
     <div class="fi-top"><i class="sev sev-${i.sev}">${i.sev}</i>
-      <b>第 ${i.ep} 集 · ${dimName(i.dim)}｜${esc(i.title)}</b>
+      <b>第 ${i.ep} 集｜${esc(i.title)}</b>
       <span class="spacer"></span>
       <button class="fi-btn" type="button" data-fixid="${i.id}">按建议改写</button></div>
     <div class="fi-q">原文「${esc(i.quote)}」</div>
@@ -259,31 +243,29 @@ function issHtml(i) {
   </div>`;
 }
 
+const dimBlock = g => `
+  <div class="fres-dim">
+    <div class="fd-head"><i class="dot" style="background:${dimColor(g.dim)}"></i>
+      <b>${dimName(g.dim)}</b><em>${g.list.length} 处</em></div>
+    <div class="fres-list">${g.list.map(issHtml).join('')}</div>
+  </div>`;
+
 function inlineResult(list) {
-  const reps = dimsOf(list), w = reps[0], p0 = list.find(i => i.sev === 'P0');
-  const head = list.slice(0, 3), rest = list.slice(3);
+  const groups = dimsOf(list);
+  const head = groups.slice(0, 2), rest = groups.slice(2);
+  const restN = rest.reduce((n, g) => n + g.list.length, 0);
   return `
   <div class="fres">
     <div class="fres-top">
-      <span class="grade ${gradeCls(SUB.grade)}">${SUB.grade}</span>
-      <div class="ft-tx"><b>综合 ${SUB.score} 分 · ${SUB.grade} 级</b>
-        <span>${VOL} · ${fmt(UP.words)} 字 · 已定位 ${list.length} 处问题</span></div>
+      <div class="ft-tx"><b>按 ${CHOSEN.dims.length} 个维度读完，定位到 ${list.length} 处问题</b>
+        <span>${VOL} · ${fmt(UP.words)} 字 · 小体量不出综合评分与评级，只给问题与依据</span></div>
       <span class="spacer"></span>
-      <span class="ft-sev">${sevBits(list) || '<i class="sev sev-P3">无显性问题</i>'}</span>
+      <span class="ft-sev">${sevBits(list)}</span>
     </div>
-    <p class="fres-say">最弱的是<b>${dimName(w.dim)}（${w.score} 分）</b>——${esc(w.text)}
-      ${p0 ? `其中第 ${p0.ep} 集「${esc(p0.title)}」是致命级，必须先改。`
-           : '没有致命级问题，按下面的顺序定点修即可。'}</p>
-    <div class="dim-bars">${reps.map(r => `
-      <div class="dim-bar">
-        <span class="nm">${dimName(r.dim)}</span>
-        <span class="track"><i class="fill" style="width:${r.score}%;background:${dimColor(r.dim)}"></i></span>
-        <span class="sc"><b>${r.score}</b> <em class="${gradeCls(r.grade)}">${r.grade}</em></span>
-      </div>`).join('')}</div>
-    <div class="fres-list">${head.map(issHtml).join('')}</div>
-    ${rest.length ? `<button class="fres-more" type="button" id="fresMore">展开其余 ${rest.length} 处问题</button>
-      <div class="fres-list" id="fresRest" hidden>${rest.map(issHtml).join('')}</div>` : ''}
-    <div class="fres-foot">这个体量的剧本不用再开报告页：以上就是完整结论。
+    ${list.length ? head.map(dimBlock).join('') : '<p class="fres-clean">所选维度内没有读到需要改的问题，这一段可以直接进下一环。</p>'}
+    ${rest.length ? `<button class="fres-more" type="button" id="fresMore">展开其余 ${rest.length} 个维度 · ${restN} 处问题</button>
+      <div id="fresRest" hidden>${rest.map(dimBlock).join('')}</div>` : ''}
+    <div class="fres-foot">这个体量不用再开报告页：以上就是全部问题与依据。
       想让我直接动手，说「全部改掉」或点单条上的「按建议改写」。</div>
   </div>`;
 }
@@ -291,13 +273,13 @@ function inlineResult(list) {
 async function runSmall() {
   CHOSEN = { mode: P.mode || '真人短剧剧本', pay: P.pay || '付费', region: P.region || '中国',
     platforms: P.platforms || [], dims: pickDims(), more: '' };
-  const m = say('ai', `<div>体量不大（${VOL}），不用先确认口径，我直接读完给结论，共 ${SMALL_STEPS.length} 步。</div>`
+  const m = say('ai', `<div>体量不大（${VOL}），不用先确认口径，我直接读完把问题挑出来，共 ${SMALL_STEPS.length} 步。</div>`
     + stepsHtml(SMALL_STEPS));
   await runSteps(m, SMALL_STEPS, 420);
   FLOW = 'inline';
   document.documentElement.dataset.flow = 'inline';
   const list = covered();
-  const mm = say('ai', `读完了，结果直接放在这儿：` + inlineResult(list));
+  const mm = say('ai', `读完了，按维度把问题列在这儿：` + inlineResult(list));
   const more = $('#fresMore', mm);
   if (more) more.onclick = () => { $('#fresRest', mm).hidden = false; more.remove(); scrollChat(); };
 }
@@ -443,15 +425,21 @@ function answer(t) {
       + (FLOW === 'deep' ? jump('report', '合规性评估') : ''));
   }
   if (/报告|评级|总结|得分|怎么样/.test(t)) {
-    const base = `综合 <b>${FLOW === 'inline' ? SUB.grade + ' 级 / ' + SUB.score + ' 分' : SCRIPT.grade + ' 级 / ' + SCRIPT.score + ' 分'}</b>。
+    if (FLOW === 'inline') {
+      const list = covered(), ds = dimsOf(list);
+      return say('ai', `这次体量小，只给了问题定位、没有出综合评分：${
+        ds.length ? `问题集中在<b>${ds.map(r => dimName(r.dim)).join('、')}</b>，共 ${list.length} 处，`
+                  : ''}逐条依据都在上面那条结果里，想让我动手就说「全部改掉」。`);
+    }
+    const base = `综合 <b>${SCRIPT.grade} 级 / ${SCRIPT.score} 分</b>。
       最强项是格式规范（88）与台词（76），最弱是伏笔（52）与逻辑（55）。`;
-    if (FLOW === 'quick') return say('ai', base + '完整报告就在右边，含评级依据、分维度得分与平台匹配度。');
-    if (FLOW === 'deep') return say('ai', base + '完整报告在结果页。' + jump('report', '评估报告'));
-    return say('ai', base + '这次体量小，结论都已经在上面那条结果里了。');
+    if (FLOW === 'quick') return say('ai', base + `完整报告就在右边，含评级依据、分维度得分${
+      (CHOSEN.platforms || []).length ? '与平台匹配度' : ''}。`);
+    return say('ai', base + '完整报告在结果页。' + jump('report', '评估报告'));
   }
   if (/导出|下载/.test(t)) return say('ai', FLOW === 'inline'
-    ? '这次是对话内直接出结果，Demo 暂不提供导出；多集剧本走报告页时可导出 PDF / Word。'
-    : '报告右上角可导出 PDF / Word；采纳后的正文在「修改对比」里导出。');
+    ? '这次是对话内直接出结果，Demo 暂不提供导出；多集剧本走报告页时可导出 PDF。'
+    : '报告右上角可导出 PDF（Demo 只支持 PDF）；采纳后的正文在「修改对比」里导出。');
 
   say('ai', `我可以做这几件事：<ul>
     <li>说「全部改掉」或「第 3 集修复」，我直接改</li>
@@ -480,8 +468,7 @@ if (STAGE === 'result') {
     platforms: SCRIPT.brief.platforms, dims: DEFAULT_DIMS, more: '' };
   $('#volTag').textContent = `${SCRIPT.meta.eps} 集 · ${fmt(SCRIPT.meta.words)} 字`;
   say('me', `上传了 <b>${esc(SCRIPT.file)}</b>　<span class="hint-inline">${SCRIPT.size} · ${SCRIPT.meta.eps} 集</span>`);
-  say('ai', `已确认：<b>真人短剧剧本 · 付费 · 中国</b> · 投稿平台 <b>${SCRIPT.brief.platforms.join('、')}</b>
-    · 评估深度 <b>深度评估</b><br>
+  say('ai', `已确认：<b>${DEFAULT_DIMS.map(dimName).join('、')}</b> · 评估深度 <b>深度评估</b><br>
     深度评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，共 ${scoped().issues} 处问题。`);
   FLOW = 'deep';
   document.documentElement.dataset.flow = 'deep';

@@ -41,7 +41,7 @@ function sidebar() {
     fold.title = f ? '展开侧栏' : '收起侧栏';
   };
 
-  $$('.sb-item[data-soon]', sb).forEach(el => {
+  $$('[data-soon]', sb).forEach(el => {
     el.onclick = () => say(el.dataset.soon);
   });
 }
@@ -49,4 +49,45 @@ function sidebar() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', sidebar);
 } else sidebar();
+
+/* ---------- 3. 报告导出：Demo 只出 PDF，去掉 Word 与格式菜单 ---------- */
+/* 报告由 report-neo.js 在多处按需重绘（快速评估的右栏、结果页切 tab、升级后重建），
+   这里用观察器兜住每一次重绘，而不是包装 renderReport —— flat.js 之后才加载，
+   flow.js 启动时的首次渲染包装不到 */
+function pdfOnly(root) {
+  root.querySelectorAll('.rep-dl:not([data-flat-dl])').forEach(box => {
+    box.dataset.flatDl = '1';
+    box.querySelectorAll('.dl-more, .dl-menu').forEach(n => n.remove());
+    const b = box.querySelector('.dl-main');
+    if (!b) return;
+    b.dataset.dl = 'PDF';
+    b.textContent = '⤓ 导出 PDF';
+    b.title = 'Demo 中报告只支持导出 PDF';
+    b.onclick = () => {
+      if (b.dataset.dlBusy) return;
+      b.dataset.dlBusy = '1';
+      const tx = b.textContent;
+      b.textContent = '⤓ 正在生成…';
+      setTimeout(() => {
+        delete b.dataset.dlBusy;
+        b.textContent = tx;
+        say('评估报告 PDF 已生成（Demo 不产出真实文件）');
+      }, 900);
+    };
+  });
+}
+
+function watchReports() {
+  pdfOnly(document);
+  let queued = false;
+  new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; pdfOnly(document); });
+  }).observe(document.body, { childList: true, subtree: true });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', watchReports);
+} else watchReports();
 })();

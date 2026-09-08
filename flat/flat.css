@@ -417,4 +417,78 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 :root[data-flow="inline"] .studio.solo .pane-head::after { content: '体量不大，这次的评估结果直接回在对话里'; }
 :root[data-flow="deep"] .studio.solo .pane-head::after { content: '深度评估：完整结果在新页面打开，对话里给出摘要与入口'; }
 
+/* ================================================================
+   11. 首页按参考稿对齐：品牌 emoji / 最近项目 / 大输入框 + 纸飞机发送键
+   ================================================================ */
+.sb-logo.plain {
+  width: 22px; height: 22px; border-radius: 0;
+  background: none; color: inherit; font-size: 16px; font-weight: 400;
+}
+/* 最近项目用 button 承载「未展开」提示，视觉仍按链接来 */
+.sb-rec {
+  position: relative; width: 100%; padding-left: 20px;
+  border: 0; background: transparent; font: inherit; font-size: 12.5px;
+  text-align: left; cursor: pointer;
+}
+.sb-rec::before {
+  content: ''; position: absolute; left: 9px; top: 50%; width: 5px; height: 5px;
+  margin-top: -2px; border-radius: 50%; background: var(--border-strong);
+}
+.sb-rec.on::before { background: var(--accent); }
+
+/* 输入框：参考稿里是一个高输入区，附件与发送都在右下角 */
+.entry { max-width: 800px; padding-top: 34px; }
+.entry-hero h1 { font-size: 32px; }
+.composer-uni { padding: 16px 18px; border-radius: 14px; }
+.composer-uni #reqInput { min-height: 168px; font-size: 14.5px; }
+.composer-uni .file-row { display: flex; align-items: center; gap: 10px; }
+.composer-uni .file-row:has(.file-chip) { margin-top: 8px; }
+.composer-uni .composer-foot { margin-top: 4px; gap: 8px; }
+/* 附件收成一个纯图标按钮 */
+.composer-uni .attach-btn {
+  width: 30px; height: 30px; padding: 0; justify-content: center;
+  border: 0; border-radius: 8px; background: transparent;
+  color: var(--text-muted); font-size: 15px;
+}
+.composer-uni .attach-btn:hover { background: var(--surface-2); color: var(--accent); border: 0; }
+#startBtn.send-btn { width: 36px; height: 36px; }
+#startBtn.send-btn svg { width: 17px; height: 17px; fill: currentColor; }
+
+.skill-row { margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.sr-hint { display: inline; margin: 0; }
+.samp-row { gap: 9px; }
+.samp { height: 32px; font-size: 12.5px; }
+
+/* ================================================================
+   12. 对话内结果（≤9 集）：不给分不给评级，按维度列问题与依据
+   ================================================================ */
+.fres-top .ft-tx b { font-size: 13px; font-weight: 650; }
+.fres-dim { padding: 11px 13px 0; }
+.fres-dim + .fres-dim { padding-top: 12px; border-top: 1px solid var(--border); margin-top: 11px; }
+.fres-dim .fd-head { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.fres-dim .fd-head .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.fres-dim .fd-head b { font-size: 13px; font-weight: 650; }
+.fres-dim .fd-head em {
+  font-style: normal; font-size: 11.5px; color: var(--text-muted);
+  padding: 1px 7px; border-radius: 999px; background: var(--surface-2);
+}
+.fres-dim .fres-list { padding: 0; }
+.fres-dim:last-of-type { padding-bottom: 12px; }
+.fres-clean { margin: 0; padding: 11px 13px; font-size: 13px; color: var(--text-secondary); }
+
+/* ================================================================
+   13. 报告导出：Demo 只出 PDF，去掉格式菜单
+   ================================================================ */
+.rep-dl .dl-wrap { gap: 0; }
+.rep-dl .dl-main { border-radius: var(--r-sm); }
+.rep-dl .dl-main[data-dl-busy] { opacity: .6; cursor: progress; }
+
+/* ================================================================
+   14. 结果页：顶部 tab 标题放大
+   ================================================================ */
+.res-head .wtabs { padding: 4px; }
+.res-head .wtab { height: 38px; padding: 0 18px; font-size: 15px; }
+.res-head .wtab .cnt { font-size: 12px; }
+.res-head .wtab[aria-selected="true"] { font-weight: 700; }
+
 
