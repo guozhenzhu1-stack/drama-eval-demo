@@ -558,3 +558,25 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .studio.wide > .splitter, .studio.wide > .pane-work { display: none; }
 .studio.wide > .pane-chat { flex: 1 1 auto; width: auto !important; border-right: 0; }
 .studio.wide .pane-body > .chat-scroll, .studio.wide .composer { max-width: 880px; margin: 0 auto; width: 100%; }
+
+/* ================================================================
+   17. 报告瘦身：只留必要信息
+   摘节点的活儿在 flat.js（slimReport），这里补瘦身后的间距，
+   以及先用 CSS 压住会闪一下的那几处（封面信息表、tab 副标题、小节重复标题）
+   ================================================================ */
+.rep-doc .doc-info,
+.rep-doc .doc-kicker,
+.rep-doc .doc-note,
+.rep-doc .rtab .rt-main em,
+.rep-doc .rpanel > .doc-h3,
+.rep-doc .pf-tip { display: none !important; }
+
+/* 信息表撤掉后，评级卡自己就是封面的收尾 */
+.rep-doc .doc-headline { margin-bottom: 0; }
+.rep-doc .doc-title { margin-top: 0; }
+/* 规则表只剩命中行，通过的用一句话交代 */
+.rep-doc .cmp-pass { margin: 9px 0 0; font-size: 12.5px; color: var(--text-muted); }
+/* 维度标题行只留「维度名 · 分数 · 问题数」 */
+.rep-doc .dim-block > .card-head { gap: 9px; }
+.rep-doc .db-sum p { margin: 0; }
+.rep-doc .rtab { padding: 11px 14px; }

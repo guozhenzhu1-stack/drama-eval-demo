@@ -118,7 +118,72 @@ function noFix(root) {
   });
 }
 
-/* ---------- 5. 对话框按参考稿对齐：点赞点踩 / 可展开的进度清单 / 标题栏 ---------- */
+/* ---------- 5. 报告瘦身：只留必要信息 ---------- */
+/* 报告由 report-neo.js 生成（与风格 A 共用，不能改源码），这里在渲染后摘掉重复与冗余：
+   封面信息表、评级依据与上探路径、各处「共 N 部分…」式的说明句、合规里全部通过的规则行 */
+function slimReport(root) {
+  root.querySelectorAll('.rep-doc:not([data-flat-slim])').forEach(doc => {
+    doc.dataset.flatSlim = '1';
+
+    /* 封面：标题上方那行小字与左上角的「剧本评估报告」重复；
+       信息表里的体量、维度、问题数在结论段里都说了，生成时间与报告号在页脚 */
+    doc.querySelectorAll('.doc-kicker, .doc-info').forEach(n => n.remove());
+    /* 结论那句评级判词已经在上面的评级卡里，段首不用再说一遍 */
+    const lead = doc.querySelector('.doc-lead');
+    if (lead) lead.innerHTML = lead.innerHTML.replace(/——[^。]*。\s*$/, '。');
+
+    /* 一：只留结论。评级依据是对结论段的复述，上探路径属于改法建议，本期不出 */
+    const sec = doc.querySelector('.doc-sec');
+    if (sec) {
+      const h2 = sec.querySelector('h2');
+      if (h2) h2.innerHTML = '<i>一</i>评估结论';
+      sec.querySelectorAll('h3').forEach(h => {
+        let n = h.nextElementSibling;
+        while (n && n.tagName === 'P') { const x = n.nextElementSibling; n.remove(); n = x; }
+        h.remove();
+      });
+    }
+
+    /* 二、三：「本次共评估 N 个维度…」「共 N 部分，点下方标签切换查看」这类话不用写出来 */
+    doc.querySelectorAll('.doc-note').forEach(n => n.remove());
+    /* tab 上的副标题，以及 tab 下与 tab 同名的小节标题 */
+    doc.querySelectorAll('.rtab .rt-main em, .rpanel > .doc-h3').forEach(n => n.remove());
+    /* 只剩一个部分时不用摆 tab：「三 详细评估」这个标题就够了 */
+    if (doc.querySelectorAll('.rtab').length < 2)
+      doc.querySelectorAll('.rtabs-wrap').forEach(n => n.remove());
+    /* 平台优化建议属于改法建议 */
+    doc.querySelectorAll('.pf-tip').forEach(n => n.remove());
+
+    /* 合规：8 行规则表里大多是「通过」，只留命中的行，其余用一句话交代 */
+    const tbl = doc.querySelector('.cmp-tbl');
+    if (tbl) {
+      const tb = tbl.tBodies[0], wrap = tbl.closest('.tbl-wrap');
+      const pass = [...tb.rows].filter(r => r.querySelector('.cmp-st.good'));
+      pass.forEach(r => r.remove());
+      if (pass.length && wrap) {
+        wrap.insertAdjacentHTML('afterend', `<p class="cmp-pass">规则库其余 ${pass.length} 项均未命中。</p>`);
+        if (!tb.rows.length) wrap.remove();
+      }
+    }
+    const ch = doc.querySelector('.cmp-head .hint-inline');
+    if (ch) ch.textContent = ch.textContent
+      .replace(/\s*·\s*[SABCD]\s*级（[^）]*）/, '')
+      .replace(/（2026-08[^）]*）/, '')
+      .replace(/\s+/g, ' ').trim();
+
+    /* 分维度：一行里同时给等级、质量评级、分数与严重度分布，留分数与问题数就够 */
+    doc.querySelectorAll('.dim-block > .card-head').forEach(hd => {
+      hd.querySelectorAll('.db-g, .sev').forEach(n => n.remove());
+      const q = hd.querySelector('.db-q');
+      if (q) q.textContent = q.textContent.replace(/^\s*质量评级[^·]*·\s*/, '');
+    });
+    doc.querySelectorAll('.db-sum .rs-tag').forEach(n => n.remove());
+    const dn = doc.querySelector('.rpanel[data-rp="dims"] .rp-note');
+    if (dn) dn.textContent = '点「第 N 集」可跳到分集问题标注对应位置。';
+  });
+}
+
+/* ---------- 6. 对话框按参考稿对齐：点赞点踩 / 可展开的进度清单 / 标题栏 ---------- */
 /* 说话的组件是共享的（flow.js、js/batch.js 的 say()），这里只在渲染后补交互 */
 const THUMB = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10.5V20H4.6A1.6 1.6 0 0 1 3 18.4v-6.3A1.6 1.6 0 0 1 4.6 10.5H7Z"/><path d="M7 10.5l4-6.2a1.4 1.4 0 0 1 2.6.75V9.4h4.2a2 2 0 0 1 2 2.45l-1.2 5.9A2 2 0 0 1 16.6 20H7"/></svg>`;
@@ -227,7 +292,7 @@ function chatHead() {
 }
 
 function watchReports() {
-  const tick = () => { pdfOnly(document); noFix(document); chatSkin(document); };
+  const tick = () => { pdfOnly(document); noFix(document); slimReport(document); chatSkin(document); };
   chatHead();
   tick();
   let queued = false;
