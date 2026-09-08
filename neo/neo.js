@@ -387,7 +387,7 @@ function uniBox() {
 }
 
 /* ---------- 澄清阶段全屏对话，出结果后自动分栏 ---------- */
-const HAS_RESULT = '.report,.batch,.annot,.tbl,.doc-out';
+const HAS_RESULT = '.report,.batch,.annot,.tbl,.res-out';
 function soloChat() {
   const studio = document.querySelector('.studio');
   if (!studio) return;
@@ -411,7 +411,7 @@ function soloChat() {
     if (on && !first) {
       studio.classList.add('splitting');
       setTimeout(() => studio.classList.remove('splitting'), 900);
-      toast('评估完成，结果文档已就绪');
+      toast('评估完成，结果摘要已就绪');
     }
     first = false;
   };
@@ -422,49 +422,39 @@ function soloChat() {
   sync();
 }
 
-/* ---------- 评估结果文档：结果都不内嵌，评估页只在对话框里给入口 ---------- */
-let DOC_FILES = null;
+/* ---------- 评估结果摘要条：结果都不内嵌，评估页只在对话框里给一条摘要 + 一个入口 ---------- */
+let RES_OUT = null;
 
-/* report-neo.js 渲染时把本次产出的结果文档清单交过来，卡片挂在哪由这里决定 */
-window.neoDocCard = function (files) {
-  if (!files || !files.length) return;
-  DOC_FILES = files;
-  const old = document.querySelector('#neoDocChat');
-  if (old) old.outerHTML = window.neoDocGroupHtml(files, 'chat');
-  else placeDocCard();
+/* report-neo.js 渲染时把本次结果的摘要交过来，挂在哪由这里决定 */
+window.neoResultOut = function (out) {
+  if (!out) return;
+  RES_OUT = out;
+  const old = document.querySelector('#neoResBar');
+  if (old) old.outerHTML = window.neoResultBarHtml(out, 'chat');
+  else placeResBar();
 };
 
 /* 挂到「评估完成」那条 AI 消息下方：步骤条与 brief 卡片所在的气泡跳过 */
-function placeDocCard() {
-  if (!DOC_FILES || document.querySelector('#neoDocChat')) return;
-  if (typeof window.neoDocGroupHtml !== 'function') return;
+function placeResBar() {
+  if (!RES_OUT || document.querySelector('#neoResBar')) return;
+  if (typeof window.neoResultBarHtml !== 'function') return;
   const bs = document.querySelectorAll('#chatScroll .msg.ai .bubble');
   const b = bs[bs.length - 1];
   if (!b || b.querySelector('.steps') || b.querySelector('#briefCard')) return;
-  b.insertAdjacentHTML('beforeend', window.neoDocGroupHtml(DOC_FILES, 'chat'));
+  b.insertAdjacentHTML('beforeend', window.neoResultBarHtml(RES_OUT, 'chat'));
 }
 
-/* 快速评估升级为深度评估后，已贴出的入口要改 depth，并补出分集问题标注那一份 */
-function retagDocCard(d) {
-  if (!DOC_FILES) return;
-  DOC_FILES = DOC_FILES.map(f => ({ ...f, href: f.href.replace(/([?&]depth=)\w+/, '$1' + d) }));
-  const old = document.querySelector('#neoDocChat');
-  if (old) old.outerHTML = window.neoDocGroupHtml(DOC_FILES, 'chat');
-}
-
-/* ⌘K / 对话里的「在结果页查看」：复用已贴出的文档入口链接，新窗口打开并登记 */
+/* ⌘K / 对话里的「在结果页查看」：各视角只差一个 tab 参数，拿摘要里的基准链接换掉即可 */
 function openRes(k) {
-  if (!DOC_FILES || !DOC_FILES.length) {
-    toast('评估完成后会给出结果文档，届时可在新页面查看');
+  if (!RES_OUT) {
+    toast('评估完成后会给出结果摘要，届时可在新页面查看');
     return;
   }
   if ((k === 'annot' || k === 'diff') && window.NEO_DEPTH === 'quick') {
     toast('分集问题标注是深度评估的产物，升级后即可查看');
     return;
   }
-  /* 修改对比没有独立入口卡片，借任意一份的链接换掉 tab 即可（结果页状态全在 URL 里） */
-  const f = DOC_FILES.find(x => x.k === k) || DOC_FILES[0];
-  openResHref(f.k === k ? f.href : f.href.replace(/([?&]tab=)\w+/, '$1' + k));
+  openResHref(RES_OUT.href.replace(/([?&]tab=)\w+/, '$1' + k));
 }
 function openResHref(href) {
   const w = window.open(href, '_blank');
@@ -517,12 +507,12 @@ function pingOnChat() {
   box.addEventListener('keydown', e => { if (e.key === 'Enter') later(); });
 }
 
-/* 文档卡片自己开的窗口也要登记，这样评估页的改动能推到结果页 */
-function trackDocLinks() {
+/* 摘要条主入口自己开的窗口也要登记，这样评估页的改动能推到结果页 */
+function trackResLinks() {
   addEventListener('click', e => {
     const j = e.target.closest && e.target.closest('[data-res-jump]');
     if (j) { e.preventDefault(); openRes(j.dataset.resJump); return; }
-    const a = e.target.closest && e.target.closest('a.doc-file');
+    const a = e.target.closest && e.target.closest('a.ro-go');
     if (!a) return;
     e.preventDefault();
     openResHref(a.getAttribute('href'));
@@ -609,7 +599,8 @@ function stripPay(root) {
 function setDepth(d) {
   window.NEO_DEPTH = d;
   document.documentElement.dataset.depth = d;
-  retagDocCard(d);
+  /* 已贴出的摘要要跟着重算：href 里的 depth 变了，深度评估还多一个「分集问题标注」锚点 */
+  if (typeof window.neoResRebuild === 'function') window.neoResRebuild();
 }
 
 window.neoUpsellHtml = where => `
@@ -625,8 +616,8 @@ window.neoUpsellHtml = where => `
 
 function upsellChat() {
   if (window.NEO_DEPTH !== 'quick') return;
-  /* 结果都不内嵌了，以对话框里的结果文档卡片作为「已出结果」的判据 */
-  if (!document.querySelector('#neoDocChat')) return;
+  /* 结果都不内嵌了，以对话框里的结果摘要条作为「已出结果」的判据 */
+  if (!document.querySelector('#neoResBar')) return;
   if (document.querySelector('#neoUpsellChat')) return;
   const bs = document.querySelectorAll('#chatScroll .msg.ai .bubble');
   const b = bs[bs.length - 1];
@@ -636,17 +627,15 @@ function upsellChat() {
 
 window.neoUpgrade = function () {
   if (window.NEO_DEPTH === 'deep') return;
-  setDepth('deep');
+  setDepth('deep');           /* 摘要条随之重算，多出「分集问题标注」锚点 */
   document.querySelectorAll('.neo-upsell').forEach(n => n.remove());
   toast('已升级为深度评估，分集问题标注已生成');
   /* 结果页里点的升级：由结果页自己解锁标注 tab */
   if (typeof window.neoOnUpgrade === 'function') { window.neoOnUpgrade(); return; }
-  /* 评估页里点的升级：结果文档清单重算，多出一份「分集问题标注」 */
-  if (typeof window.neoDocRebuild === 'function') window.neoDocRebuild();
   if (typeof say === 'function')
     say('ai', `已按<b>深度评估</b>重新精读全本：在原评估报告之上补出<b>分集问题标注</b>，
       每处问题都落到「第几集 · 第几场 · 哪句台词」，并给判断依据与改写建议。
-      结果文档里已多出一份<b>分集问题标注</b>，点开即可看到每处问题对应的原文位置。`);
+      结果页里已多出<b>分集问题标注</b>，点开即可看到每处问题对应的原文位置。`);
 };
 
 /* 升级按钮等全局委托：与 depth() 分开注册，无对话区的页面（结果页）同样生效 */
@@ -682,7 +671,7 @@ function depth() {
     trimBrief(card);
     injectDepth(card);
     stripPay(chat);
-    placeDocCard();
+    placeResBar();
     retextChat();
     upsellChat();
   };
@@ -714,8 +703,8 @@ function retextChat() {
       n.nodeValue = s;
       hit = true;
     }
-    /* 已经带了结果文档卡片组的那条消息不再重复给跳转按钮 */
-    if (!hit || !DOC_FILES || b.querySelector('.res-jump, .doc-out')) return;
+    /* 已经带了结果摘要条或跳转按钮的那条消息不再重复给按钮 */
+    if (!hit || !RES_OUT || b.querySelector('.res-jump, .res-out')) return;
     const k = jumpKeyOf(b.textContent);
     b.insertAdjacentHTML('beforeend',
       `<button class="res-jump" type="button" data-res-jump="${k}">在结果页查看${JUMP_T[k]} <i>↗</i></button>`);
@@ -773,7 +762,7 @@ function keys() {
 function boot() {
   stars(); spotlight(); ripples(); keys();
   tabIndicator(); chatStream(); scrollBar(); watch();
-  hideWorkTabs(); soloChat(); depth(); depthClicks(); pingOnChat(); trackDocLinks();
+  hideWorkTabs(); soloChat(); depth(); depthClicks(); pingOnChat(); trackResLinks();
   if (PAGE === 'entry') { typer(); uniBox(); }
 }
 if (document.readyState === 'loading') addEventListener('DOMContentLoaded', boot);

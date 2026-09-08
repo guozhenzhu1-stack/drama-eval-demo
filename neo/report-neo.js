@@ -199,7 +199,7 @@ const pad2 = n => String(n).padStart(2, '0');
 const docNo = title => 'SE-' +
   Math.abs([...String(title)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7) % 90000 + 10000);
 
-/* ---------- 评估结果文档：所有评估结果都在独立的结果页展示 ---------- */
+/* ---------- 评估结果入口：所有评估结果都在独立的结果页展示 ---------- */
 /* 状态全部编码进 URL，结果页用同一份 mock 数据还原出同样的结果 */
 /* neo.js 的 PAGE 封在自身 IIFE 里取不到，这里从 body 上自行读取 */
 const pageOf = () => (document.body && document.body.dataset.page) || '';
@@ -223,43 +223,70 @@ function resultLink(tab, use, showMatch, titleNote) {
   return 'result.html?' + p.toString();
 }
 
-/* 本次产出了哪些结果文档：批量结论（B 端）/ 评估报告 / 分集问题标注（深度评估） */
-function docFiles(script, use, cnt, chapters, stamp, showMatch, titleNote) {
+/* ---------- 本次评估的结果摘要 ----------
+   报告 / 分集问题标注 / 批量结论是同一份结果的三个视角（结论层 / 证据层 / 集合层），
+   拆成三张同级卡片会逼用户在看到任何内容之前先选一次，而答案几乎总是「先看结论」。
+   这里只给一条带关键数字的摘要 + 一个主入口，深链降级为次级细链接。
+   结果页状态全在 URL 里且各视角只差一个 tab 参数，所以一个基准链接就够。 */
+function resultOut(script, use, cnt, stamp, showMatch, titleNote) {
   const pg = pageOf();
-  const files = [];
+  const dp = window.NEO_DEPTH === 'quick' ? '快速评估' : '深度评估';
+  const href = resultLink(pg === 'batch' ? 'batch' : 'report', use, showMatch, titleNote);
+
   if (pg === 'batch') {
     const data = (typeof DATA !== 'undefined' && DATA) || [];
-    const n = (typeof N !== 'undefined' && N) || data.length;
-    const sa = data.filter(b => b.grade === 'S' || b.grade === 'A').length;
-    files.push({ k: 'batch', ico: '▩', title: '9 月第 1 批投稿 · 批量评估结果',
-      sub: `${n} 份稿件 · 符合审稿要求 ${data.filter(b => b.match).length} 部 · S/A 级 ${sa} 部
-        · 拦截无效投稿 ${data.filter(b => b.reject).length} 份 · ${stamp}` });
+    const n = (typeof N !== 'undefined' && N) || data.length || 1;
+    const req = (typeof CHOSEN !== 'undefined' && CHOSEN.req) || '';
+    const rj = data.filter(b => b.reject).length;
+    const kpis = [];
+    if (req) kpis.push({ v: `${data.filter(b => b.match).length} <small>部</small>`, t: '符合审稿要求' });
+    kpis.push(
+      { v: `${data.filter(b => b.grade === 'S' || b.grade === 'A').length} <small>部</small>`, t: 'S / A 级' },
+      { v: `${rj} <small>份</small>`, t: '拦截无效投稿' },
+      { v: `${Math.round((1 - rj / n) * 100)}<small>%</small>`, t: '有效稿占比' });
+    return { k: 'batch', href, ico: '▩', go: '查看批量评估结果', kpis, links: [],
+      head: `批量评估完成 · ${n} 份稿件`,
+      sub: `${dp} · ${use.length} 个维度 · ${stamp}`,
+      note: (req ? '' : '未设自定义审稿要求，按所选维度做通用分级。')
+        + '批量结论、单份评估报告与逐集标注都在同一个结果页；在结果表里点任意一行即可展开该稿件的报告。' };
   }
-  files.push({ k: 'report', ico: '▤', title: `《${script.title}》剧本评估报告`,
-    sub: `${docNo(script.title)} · 共三章（评估结论 / 分维度得分 / 详细评估 ${chapters} 部分）
-      · ${use.length} 个维度 · ${cnt.issues} 处问题 · ${stamp}` });
-  if (window.NEO_DEPTH !== 'quick')
-    files.push({ k: 'annot', ico: '◫', title: `《${script.title}》分集问题标注`,
-      sub: `已解析前 ${script.meta.parsedEps} 集 · ${cnt.issues} 处问题（致命 ${cnt.p0} · 严重 ${cnt.p1}）
-        · 定位到「第几集 · 第几场 · 哪句台词」${pg === 'batch' ? ' · 只读标注' : ' · 可一键修复并看改前改后'}` });
-  return files.map(f => ({ ...f, href: resultLink(f.k, use, showMatch, titleNote) }));
+
+  const weak = [...use].sort((a, b) => a.score - b.score)[0];
+  return {
+    k: 'report', href, grade: script.grade, go: '查看完整评估结果',
+    head: `评估完成 · ${dp} · ${use.length} 个维度`,
+    sub: `《${esc(script.title)}》· ${script.meta.eps} 集 / ${(script.meta.words / 10000).toFixed(1)} 万字
+      · ${docNo(script.title)} · ${stamp}${titleNote ? ` · ${esc(titleNote)}` : ''}`,
+    kpis: [
+      { v: `${script.score} <small>分</small>`, t: `综合评分 · ${script.grade} 级` },
+      { v: `${cnt.issues} <small>处</small>`, t: '已定位问题' },
+      { v: `<i class="sev sev-P0">P0 ${cnt.p0}</i><i class="sev sev-P1">P1 ${cnt.p1}</i>`, t: '严重度分布' },
+      { v: weak ? esc(dimName(weak.dim)) : '—', t: '最弱维度' }
+    ],
+    /* 标注的自然入口是报告里点「第 N 集」，这里只留一个轻量快捷方式 */
+    links: window.NEO_DEPTH === 'quick' ? [] : [{ k: 'annot', t: '分集问题标注' }],
+    note: '评估报告 / 分集问题标注 / 修改对比 都在同一个结果页，按 tab 切换；网址带全部状态，可直接分享。'
+  };
 }
 
-/* 结果文档入口卡片组：投进对话框里的「评估结果文档」区块 */
-/* 不加 rel=noopener——结果页要靠 window.opener 与评估页共享同一份剧本数据（同源本地页） */
-window.neoDocGroupHtml = (files, where) => `
-  <div class="doc-out${where === 'chat' ? ' in-chat' : ''}"${where === 'chat' ? ' id="neoDocChat"' : ''}>
-    <div class="doc-out-t"><span class="dot"></span>评估结果文档 <i class="dc-n">${files.length} 份</i></div>
-    <div class="doc-files">${files.map(f => `
-      <a class="card doc-file" href="${f.href}" target="_blank" data-rk="${f.k}"
-         title="在新页面打开：${esc(f.title)}">
-        <span class="df-ico">${f.ico}</span>
-        <span class="df-main"><b>${esc(f.title)}</b><em>${f.sub}</em></span>
-        <span class="df-go">在新页面打开 <i>↗</i></span>
-      </a>`).join('')}</div>
-    <div class="doc-out-h">${files.length > 1
-      ? '这几份结果同属一个结果页，点任意一份都会在新页面打开并直接定位到对应部分'
-      : '点开在新页面全屏展示'}，不带左侧对话区，适合逐章细读、投屏评审或直接导出。</div>
+/* 结果摘要条：投进对话框里，正文都在结果页 */
+/* 主入口不加 rel=noopener——结果页要靠 window.opener 与评估页共享同一份剧本数据（同源本地页） */
+window.neoResultBarHtml = (o, where) => `
+  <div class="res-out${where === 'chat' ? ' in-chat' : ''}"${where === 'chat' ? ' id="neoResBar"' : ''}>
+    <div class="ro-main">
+      ${o.grade ? `<span class="grade ${gradeCls(o.grade)}">${o.grade}</span>`
+                : `<span class="ro-ico">${o.ico}</span>`}
+      <div class="ro-hd"><b>${esc(o.head)}</b><span>${o.sub}</span></div>
+      <a class="btn btn-primary ro-go" href="${o.href}" target="_blank"
+         title="在新页面打开评估结果">${esc(o.go)} <i>↗</i></a>
+    </div>
+    <div class="ro-kpi">${o.kpis.map(x => `
+      <span class="rk"><span class="v">${x.v}</span><em>${esc(x.t)}</em></span>`).join('')}</div>
+    <div class="ro-foot">
+      ${o.links.length ? `<span class="ro-jump">直接跳到${o.links.map(l =>
+        `<button class="res-jump" type="button" data-res-jump="${l.k}">${esc(l.t)} <i>↗</i></button>`).join('')}</span>` : ''}
+      <span class="ro-note">${o.note}</span>
+    </div>
   </div>`;
 
 
@@ -310,14 +337,17 @@ window.renderReport = function (host, script, opts = {}) {
   /* 题材 / 地区在 mock 里挂在 brief 上（meta 里没有这两项） */
   const bf = script.brief || {};
 
-  /* 评估页不再内嵌任何结果：只把结果文档入口投进对话框，正文都在结果页看 */
+  /* 评估页不再内嵌任何结果：只把结果摘要条投进对话框，正文都在结果页看 */
   const PG = pageOf();
   if (PG !== 'report' && PG !== 'result') {
     host.innerHTML = '';
-    const build = () => docFiles(script, use, cnt, TABS.length, stamp, showMatch, titleNote);
-    /* 快速评估升级为深度后，清单要重算（多一份分集问题标注），故把构造过程留给 neo.js */
-    window.neoDocRebuild = () => { if (typeof window.neoDocCard === 'function') window.neoDocCard(build()); };
-    window.neoDocRebuild();
+    /* 深度切换后摘要要重算（多一个「分集问题标注」锚点、href 里的 depth 也要改），
+       故把构造过程留给 neo.js 按需重放 */
+    window.neoResRebuild = () => {
+      if (typeof window.neoResultOut === 'function')
+        window.neoResultOut(resultOut(script, use, cnt, stamp, showMatch, titleNote));
+    };
+    window.neoResRebuild();
     return;
   }
 

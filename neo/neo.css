@@ -424,7 +424,7 @@ select option { background: #fff; color: #0b1020; }
 .studio.solo .composer { padding-left: 0; padding-right: 0; }
 .studio.solo .pane-head { justify-content: flex-start; }
 .studio.solo .pane-head::after {
-  content: '评估结果都在新页面打开：完成后对话里会给出结果文档入口';
+  content: '评估结果都在新页面打开：完成后对话里给出结果摘要与入口';
   font-size: 11.5px; color: var(--text-muted);
   margin-left: auto;
 }
@@ -1162,73 +1162,58 @@ ins.dv { background: rgba(16, 185, 129, .16); color: #06795a; text-decoration: n
 
 /* 打印/导出预览：只留纸面 */
 @media print {
-  body::before, body::after, #neoStars, .topbar, .doc-bar, .neo-upsell, .doc-out { display: none !important; }
+  body::before, body::after, #neoStars, .topbar, .doc-bar, .neo-upsell, .res-out { display: none !important; }
   .rep-doc { padding: 0; max-width: none; }
   .doc-page { border: 0; box-shadow: none; max-width: none; padding: 0; }
   .doc-page .rpanel { display: block !important; }
   .doc-page .rtabs-wrap { display: none; }
 }
 
-/* ================= 评估结果文档：入口卡片 + 独立文档页 ================= */
-.doc-out { max-width: 900px; margin: var(--sp-5) auto 0; }
-.doc-out-t {
-  display: flex; align-items: center; gap: 7px; margin-bottom: 10px;
-  font-size: 12.5px; font-weight: 650; color: var(--text-secondary); letter-spacing: .02em;
-}
-.doc-out-t .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--grad); }
-.doc-out-h { margin-top: 8px; font-size: 12px; line-height: 1.75; color: var(--text-muted); }
-
-.doc-file {
-  display: flex; align-items: center; gap: var(--sp-3);
-  padding: 14px 16px; text-decoration: none; color: inherit;
+/* ================= 评估结果摘要条：对话里唯一的结果入口 ================= */
+/* 一条摘要（关键结论）+ 一个主按钮 + 一行次级锚点，取代原来三张同级文档卡片 */
+.res-out {
+  max-width: 900px; margin: var(--sp-5) auto 0; padding: 15px 17px 13px;
   border: 1px solid var(--border); border-radius: var(--r-md);
-  background: var(--surface-1); transition: .18s;
+  background: var(--surface-1); box-shadow: 0 2px 12px rgba(20, 40, 100, .05);
 }
-.doc-file:hover {
-  text-decoration: none; border-color: var(--accent);
-  box-shadow: 0 6px 20px rgba(20, 40, 100, .10); transform: translateY(-1px);
-}
-.doc-file .df-ico {
-  flex: none; width: 40px; height: 46px; display: grid; place-items: center;
+.res-out.in-chat { max-width: none; margin: 12px 0 0; }
+
+.ro-main { display: flex; align-items: center; gap: var(--sp-3); }
+.ro-main > .grade { flex: none; }
+.ro-ico {
+  flex: none; width: 40px; height: 44px; display: grid; place-items: center;
   border-radius: 6px 10px 6px 6px; background: var(--grad); color: var(--on-accent);
-  font-size: 19px; box-shadow: var(--glow);
+  font-size: 18px; box-shadow: var(--glow);
 }
-.doc-file .df-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.doc-file .df-main b { font-size: 14.5px; }
-.doc-file .df-main em {
-  font-style: normal; font-size: 11.5px; line-height: 1.7; color: var(--text-muted);
+.ro-hd { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ro-hd b { font-size: 14.5px; }
+.ro-hd span { font-size: 11.5px; line-height: 1.7; color: var(--text-muted); }
+.ro-go { flex: none; text-decoration: none; }
+.ro-go:hover { text-decoration: none; }
+.ro-go i { font-style: normal; margin-left: 2px; }
+
+/* 关键数字：不点开也知道结果好不好，容器的体积才有东西撑着 */
+.ro-kpi {
+  display: flex; flex-wrap: wrap; gap: 10px 26px;
+  margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--border);
 }
-.doc-file .df-go {
-  flex: none; display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 12px; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 600;
-  color: var(--accent); background: var(--surface-2); border: 1px solid var(--border);
+.ro-kpi .rk { display: flex; flex-direction: column; gap: 4px; min-width: 84px; }
+.ro-kpi .v { font-size: 17px; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; }
+.ro-kpi .v small { font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
+.ro-kpi .v .sev { display: inline-block; margin-right: 4px; vertical-align: 3px; }
+.ro-kpi em { font-style: normal; font-size: 11px; color: var(--text-muted); }
+
+.ro-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 12px; }
+.ro-jump {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  font-size: 11.5px; color: var(--text-muted);
 }
-.doc-file:hover .df-go { color: var(--on-accent); background: var(--grad); border-color: transparent; }
-.doc-file .df-go i { font-style: normal; }
+.ro-jump .res-jump { margin-top: 0; padding: 4px 10px; font-size: 11.5px; }
+.ro-note { flex: 1 1 260px; min-width: 0; font-size: 11.5px; line-height: 1.7; color: var(--text-muted); }
+
 @media (max-width: 720px) {
-  .doc-file { flex-wrap: wrap; }
-  .doc-file .df-go { margin-left: 49px; }
-}
-
-/* 对话框内版式：气泡里宽度有限，图标缩小、按钮换行占满 */
-.doc-out.in-chat { max-width: none; margin: 11px 0 0; }
-.doc-out.in-chat .doc-out-t { margin-bottom: 7px; font-size: 12px; }
-.doc-out.in-chat .doc-file { flex-wrap: wrap; gap: 10px; padding: 11px 12px; }
-.doc-out.in-chat .df-ico { width: 32px; height: 38px; font-size: 16px; }
-.doc-out.in-chat .df-main b { font-size: 13.5px; }
-.doc-out.in-chat .df-main em { font-size: 11px; }
-.doc-out.in-chat .df-go { width: 100%; justify-content: center; }
-.doc-out.in-chat .doc-out-h { margin-top: 7px; font-size: 11.5px; }
-
-/* B 端「评估报告文档」tab：面板里只放文档入口，给出版心与留白 */
-#repHost > .doc-out { padding: var(--sp-4) var(--sp-4) 0; }
-
-/* 一次产出多份结果文档：竖排卡片 + 份数角标 */
-.doc-files { display: flex; flex-direction: column; gap: 9px; }
-.doc-out-t .dc-n {
-  font-style: normal; padding: 1px 7px; border-radius: var(--r-pill);
-  font-size: 11px; font-weight: 600; color: var(--accent);
-  background: var(--surface-2); border: 1px solid var(--border);
+  .ro-main { flex-wrap: wrap; }
+  .ro-go { width: 100%; justify-content: center; }
 }
 
 /* 对话答案里的「在结果页查看」跳转按钮 */
