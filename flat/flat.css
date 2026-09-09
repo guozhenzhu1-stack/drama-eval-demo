@@ -587,36 +587,36 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 
 
 /* ================================================================
-   18. 评估深度：一行开关（v17）
-   胶囊组由 flat.js（depthPick）搬进隐藏槽位保活取值；这里画一个两态 switch，
-   下面一行文字随当前选中态换成对应说明，不再是两段常驻的说明卡片
+   18. 评估深度：分段双选按钮（v18）
+   胶囊组由 flat.js（depthPick）搬进隐藏槽位保活取值；这里画两个并排、
+   可独立点选的选项按钮，选中态各自高亮，下面一行文字随当前选中态换成
+   对应说明，让「有两个可选项」这件事一看就懂，不再是单滑块开关
    ================================================================ */
 .neo-depth-fld [data-group="depth"] { display: none; }
 .neo-depth-fld .dp-sw { margin-top: 8px; }
-.neo-depth-fld .dp-row { display: flex; align-items: center; gap: 10px; }
-.neo-depth-fld .dp-tg {
-  position: relative; flex: none; width: 172px; height: 30px; padding: 0;
-  border: 1px solid var(--border); border-radius: var(--r-pill);
-  background: var(--surface-2); cursor: pointer; overflow: hidden;
+.neo-depth-fld .dp-seg {
+  display: inline-flex; gap: 6px; padding: 3px; border-radius: var(--r-pill);
+  background: var(--surface-2); border: 1px solid var(--border);
 }
-.neo-depth-fld .dp-tg .dp-kb {
-  position: absolute; top: 2px; left: 2px; width: 84px; height: 24px;
-  border-radius: var(--r-pill); background: var(--surface-1); box-shadow: var(--shadow-1);
-  transition: transform .18s ease;
+.neo-depth-fld .dp-opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  min-width: 120px; padding: 6px 14px; border: 1px solid transparent; border-radius: var(--r-pill);
+  background: none; cursor: pointer; font: inherit; text-align: left;
+  transition: background .15s, border-color .15s, box-shadow .15s;
 }
-.neo-depth-fld .dp-tg.on .dp-kb { transform: translateX(84px); }
-.neo-depth-fld .dp-tg .dp-lb {
-  position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center;
-  width: 86px; height: 30px; font-size: 12.5px; color: var(--text-muted); transition: color .18s;
+.neo-depth-fld .dp-opt .dp-opt-n { font-size: 13px; color: var(--text-secondary); transition: color .15s; }
+.neo-depth-fld .dp-opt .dp-opt-o {
+  font-size: 11.5px; font-weight: 600; color: var(--text-muted); transition: color .15s;
 }
-.neo-depth-fld .dp-tg:not(.on) .dp-lb-q,
-.neo-depth-fld .dp-tg.on .dp-lb-d { color: var(--text-primary); font-weight: 650; }
-.neo-depth-fld .dp-tg:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.neo-depth-fld .dp-out {
-  font-size: 12px; font-weight: 600; color: var(--accent);
-  background: var(--accent-wash); padding: 3px 9px; border-radius: var(--r-pill);
+.neo-depth-fld .dp-opt[aria-pressed="true"] {
+  background: var(--surface-1); border-color: var(--accent); box-shadow: var(--shadow-1);
 }
+.neo-depth-fld .dp-opt[aria-pressed="true"] .dp-opt-n { color: var(--text-primary); font-weight: 650; }
+.neo-depth-fld .dp-opt[aria-pressed="true"] .dp-opt-o { color: var(--accent); }
+.neo-depth-fld .dp-opt:not([aria-pressed="true"]):hover { background: var(--surface-1); }
+.neo-depth-fld .dp-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .neo-depth-fld .dp-tx { margin: 7px 0 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; }
+
 
 
 
@@ -718,3 +718,21 @@ mark.iss.iss-static:hover, mark.iss.iss-static.focus { box-shadow: none; outline
 .rep-file .rf-tx em { font-style: normal; font-size: 12px; color: var(--text-muted); }
 .rep-file .rf-go { flex: none; font-style: normal; color: var(--text-muted); font-size: 16px; }
 .rep-file:hover .rf-go { color: var(--accent); }
+
+
+/* ================================================================
+   23. 深度评估完成：对话里只留「查看完整评估结果」按钮
+   neo.js 的 placeResBar 会把评级/KPI/跳转摘要条自动贴到自然语言总结同一条
+   气泡下面（.res-out.in-chat#neoResBar）；节点本身不能摘掉（soloChat 的
+   HAS_RESULT 还要认它），这里只做视觉裁剪：藏掉评级徽标、KPI 网格与
+   底部跳转/说明，只留 .ro-go 这一个按钮
+   ================================================================ */
+.res-out.in-chat.flat-slim { padding: 0; border: 0; background: none; }
+.res-out.in-chat.flat-slim .ro-main { gap: 0; }
+.res-out.in-chat.flat-slim .ro-main > .grade,
+.res-out.in-chat.flat-slim .ro-main > .ro-ico,
+.res-out.in-chat.flat-slim .ro-hd,
+.res-out.in-chat.flat-slim .ro-kpi,
+.res-out.in-chat.flat-slim .ro-foot { display: none; }
+.res-out.in-chat.flat-slim .ro-go { margin-top: 2px; }
+

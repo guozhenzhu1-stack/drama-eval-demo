@@ -98,9 +98,9 @@ function briefCard() {
     <div class="card-body">
       <label class="fld"><span class="lbl">评估维度（可多选）</span>
         ${chipGroup('dims', DIMS.map(d => ({ v: d.id, label: d.name, color: d.color })), { multi: true, selected: pickDims() })}</label>
+      <div class="err" id="briefErr" hidden></div>
       <label class="fld"><span class="lbl">其他评估要求</span>
         <textarea id="briefMore" rows="2" placeholder="例如：重点看前 3 集付费卡点，帮我核一遍伏笔是否都回收">${esc(P.rest)}</textarea></label>
-      <div class="err" id="briefErr" hidden></div>
       <div class="brief-foot">
         <button class="btn btn-primary" id="briefGo">开始评估</button>
       </div>

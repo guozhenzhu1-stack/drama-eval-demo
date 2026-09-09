@@ -407,21 +407,24 @@ function depthPick(root) {
     const sw = document.createElement('div');
     sw.className = 'dp-sw';
     sw.innerHTML = `
-      <div class="dp-row">
-        <button class="dp-tg" type="button" role="switch" id="dpSwitch">
-          <i class="dp-kb"></i><span class="dp-lb dp-lb-q">${quick.name}</span><span class="dp-lb dp-lb-d">${deep.name}</span>
+      <div class="dp-seg" role="group" id="dpSeg">
+        <button class="dp-opt" type="button" aria-pressed="false" data-k="quick">
+          <span class="dp-opt-n">${quick.name}</span><span class="dp-opt-o" id="dpOutQ"></span>
         </button>
-        <span class="dp-out" id="dpOut"></span>
+        <button class="dp-opt" type="button" aria-pressed="false" data-k="deep">
+          <span class="dp-opt-n">${deep.name}</span><span class="dp-opt-o" id="dpOutD"></span>
+        </button>
       </div>
       <p class="dp-tx" id="dpTx"></p>`;
     fld.appendChild(sw);
-    const btn = $('#dpSwitch', sw), out = $('#dpOut', sw), tx = $('#dpTx', sw);
+    const optQ = $('.dp-opt[data-k=quick]', sw), optD = $('.dp-opt[data-k=deep]', sw), tx = $('#dpTx', sw);
+    $('#dpOutQ', sw).textContent = quick.out;
+    $('#dpOutD', sw).textContent = deep.out;
 
     const paint = deepOn => {
       const cur = deepOn ? deep : quick;
-      btn.setAttribute('aria-checked', String(deepOn));
-      btn.classList.toggle('on', deepOn);
-      out.textContent = cur.out;
+      optQ.setAttribute('aria-pressed', String(!deepOn));
+      optD.setAttribute('aria-pressed', String(deepOn));
       tx.textContent = cur.text;
     };
     const pick = deepOn => {
@@ -429,7 +432,8 @@ function depthPick(root) {
       grp.querySelectorAll('.chip').forEach(c =>
         c.setAttribute('aria-pressed', String(c.dataset.v === (deepOn ? deep.name : quick.name))));
     };
-    btn.onclick = () => pick(btn.getAttribute('aria-checked') !== 'true');
+    optQ.onclick = () => pick(false);
+    optD.onclick = () => pick(true);
 
     /* 默认选中项以胶囊组的现值为准（neo.js 默认深度评估） */
     const cur = grp.querySelector('.chip[aria-pressed=true]');
@@ -571,9 +575,18 @@ function embedTrim() {
   if (tb) tb.hidden = true;
 }
 
+/* 深度评估完成后，对话里的自然语言总结下面不再摆结果摘要卡片（评级/KPI/跳转），
+   只留「查看完整评估结果」这一个按钮——节点本身不摘掉，soloChat 的 HAS_RESULT 还要认它 */
+function resSlim(root) {
+  root.querySelectorAll('.res-out.in-chat:not([data-flat-rs])').forEach(box => {
+    box.dataset.flatRs = '1';
+    box.classList.add('flat-slim');
+  });
+}
+
 function watchReports() {
   const tick = () => { shareBox(document); noFix(document); slimReport(document); chatSkin(document);
-    depthPick(document); resEntry(document); pwClose(); };
+    depthPick(document); resEntry(document); resSlim(document); pwClose(); };
   embedTrim();
   chatHead();
   tick();
