@@ -50,32 +50,84 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', sidebar);
 } else sidebar();
 
-/* ---------- 3. 报告导出：Demo 只出 PDF，去掉 Word 与格式菜单 ---------- */
+/* ---------- 3. 报告与标注：导出改成分享，点一下生成分享链接 ---------- */
 /* 报告由 report-neo.js 在多处按需重绘（快速评估的右栏、结果页切 tab、升级后重建），
    这里用观察器兜住每一次重绘，而不是包装 renderReport —— flat.js 之后才加载，
-   flow.js 启动时的首次渲染包装不到 */
-function pdfOnly(root) {
-  root.querySelectorAll('.rep-dl:not([data-flat-dl])').forEach(box => {
-    box.dataset.flatDl = '1';
-    box.querySelectorAll('.dl-more, .dl-menu').forEach(n => n.remove());
-    const b = box.querySelector('.dl-main');
-    if (!b) return;
-    b.dataset.dl = 'PDF';
-    b.textContent = '⤓ 导出 PDF';
-    b.title = 'Demo 中报告只支持导出 PDF';
-    b.onclick = () => {
-      if (b.dataset.dlBusy) return;
-      b.dataset.dlBusy = '1';
-      const tx = b.textContent;
-      b.textContent = '⤓ 正在生成…';
-      setTimeout(() => {
-        delete b.dataset.dlBusy;
-        b.textContent = tx;
-        say('评估报告 PDF 已生成（Demo 不产出真实文件）');
-      }, 900);
-    };
+   flow.js 启动时的首次渲染包装不到。
+   结果状态本来就全编码在网址里，所以「生成分享链接」= 取这份结果的链接：
+   结果页用自己的 location，评估页右栏用对话里摘要条的基准链接 */
+const SHARE_HINT = '链接带本次评估的全部状态，打开就是同一份结果（Demo 数据为演示用）。';
+
+function shareHref(tab) {
+  const go = document.querySelector('.res-out .ro-go');
+  const base = document.body.dataset.page === 'result'
+    ? location.href
+    : (go && go.getAttribute('href')) || location.href;
+  const u = new URL(base, location.href);
+  if (tab) u.searchParams.set('tab', tab);
+  return u.href;
+}
+
+function copyUrl(input, first) {
+  const ok = () => say(first ? '分享链接已生成并复制到剪贴板' : '分享链接已复制');
+  const manual = () => {
+    try { input.focus(); input.select(); } catch (e) {}
+    say('分享链接已生成，按 ⌘C 即可复制');
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(input.value).then(ok, manual);
+    else manual();
+  } catch (e) { manual(); }
+}
+
+function sharePop(btn, tab) {
+  const wrap = btn.closest('.sh-wrap');
+  let pop = wrap.querySelector('.sh-pop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.className = 'sh-pop';
+    pop.innerHTML = `<b>分享链接已生成</b>
+      <span class="sh-row"><input class="sh-url" readonly aria-label="分享链接">
+        <button class="btn btn-sm sh-cp" type="button">复制</button></span>
+      <span class="hint-inline">${SHARE_HINT}</span>`;
+    wrap.appendChild(pop);
+    pop.onclick = e => e.stopPropagation();
+    pop.querySelector('.sh-cp').onclick = () => copyUrl(pop.querySelector('.sh-url'));
+  }
+  pop.querySelector('.sh-url').value = shareHref(tab);
+  pop.hidden = false;
+  copyUrl(pop.querySelector('.sh-url'), true);
+}
+
+const shareBtn = t => `<span class="sh-wrap"><button class="btn btn-sm sh-btn" type="button"
+  data-sh="${t}" title="生成这份结果的分享链接">⤴ 分享</button></span>`;
+const bindShare = box => {
+  const b = box.querySelector('.sh-btn');
+  b.onclick = e => { e.stopPropagation(); sharePop(b, b.dataset.sh); };
+};
+
+function shareBox(root) {
+  /* 报告工具条：导出按钮与格式菜单整块换成分享 */
+  root.querySelectorAll('.rep-dl:not([data-flat-sh])').forEach(box => {
+    box.dataset.flatSh = '1';
+    box.innerHTML = shareBtn('report');
+    bindShare(box);
+  });
+  /* 分集问题标注：导出 Word / 导出 Excel 换成同一个分享按钮 */
+  root.querySelectorAll('.annot-bar:not([data-flat-sh])').forEach(bar => {
+    const ex = bar.querySelectorAll('[data-ex]');
+    if (!ex.length) return;
+    bar.dataset.flatSh = '1';
+    ex.forEach(n => n.remove());
+    bar.insertAdjacentHTML('beforeend', shareBtn('annot'));
+    bindShare(bar);
   });
 }
+
+/* 点别处收起分享气泡 */
+document.addEventListener('click', () =>
+  document.querySelectorAll('.sh-pop:not([hidden])').forEach(p => p.hidden = true));
 
 /* ---------- 4. 本期只做问题检测：抹掉共享组件里的修改建议与改稿入口 ---------- */
 /* report-neo.js / annot.js / result-page.js 由风格 A 与 v1 共用，不能改；
@@ -350,8 +402,137 @@ function depthPick(root) {
   });
 }
 
+/* ---------- 8. 深度评估的完整结果：不再开新页面，改成对话上方的浮层 ---------- */
+/* 结果正文仍由结果页那套代码渲染（result.html + result-page.js，与风格 A 共用），
+   这里把它嵌进浮层的 iframe：状态本来就全在网址里，换个容器即可。
+   neo.js 的 openResHref 是顶层函数声明（即 window 上的属性），改写它就同时接住了
+   摘要条主入口、「直接跳到…」按钮与 ⌘K 面板三处入口 */
+const inResult = () => document.body.dataset.page === 'result';
+const embedded = () => window.parent !== window && inResult();
+
+function layer() {
+  let el = $('#resLayer');
+  if (el) return el;
+  el = document.createElement('div');
+  el.className = 'res-layer';
+  el.id = 'resLayer';
+  el.hidden = true;
+  el.innerHTML = `
+    <div class="rl-mask" data-rl-close></div>
+    <div class="rl-panel" role="dialog" aria-modal="true" aria-label="评估结果">
+      <div class="rl-head">
+        <b class="rl-t">完整评估结果</b>
+        <span class="rl-sub">报告与分集问题标注按上方 tab 切换</span>
+        <span class="spacer"></span>
+        <button class="rl-x" type="button" data-rl-close title="关闭（Esc）">✕ 关闭</button>
+      </div>
+      <iframe class="rl-frame" id="rlFrame" title="完整评估结果"></iframe>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if (e.target.closest('[data-rl-close]')) shutLayer(); });
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !el.hidden) { e.preventDefault(); shutLayer(); }
+  });
+  return el;
+}
+
+function showLayer(href) {
+  const el = layer(), fr = $('#rlFrame', el);
+  if (fr.dataset.href !== href) {
+    fr.dataset.href = href;
+    fr.src = href;
+  }
+  el.hidden = false;
+  document.body.classList.add('rl-on');
+  requestAnimationFrame(() => el.classList.add('in'));
+  $('.rl-x', el).focus();
+}
+
+function shutLayer() {
+  const el = $('#resLayer');
+  if (!el || el.hidden) return;
+  el.classList.remove('in');
+  el.hidden = true;
+  document.body.classList.remove('rl-on');
+}
+
+/* 摘要条主入口与「直接看…」按钮：neo.js 里开新窗口的 openResHref 包在 IIFE 里改不到，
+   所以在捕获阶段先接下这些点击（neo.js 的委托是冒泡阶段，stopPropagation 就够） */
+addEventListener('click', e => {
+  const t = e.target.closest && e.target.closest('.res-out .ro-go, [data-res-jump]');
+  if (!t || inResult()) return;
+  const go = document.querySelector('.res-out .ro-go');
+  const base = t.matches('.ro-go') ? t.getAttribute('href') : go && go.getAttribute('href');
+  if (!base) return;
+  const k = t.dataset.resJump;
+  if (k && k !== 'report' && window.NEO_DEPTH === 'quick') {
+    e.preventDefault(); e.stopPropagation();
+    say('分集问题标注是深度评估的产物，升级后即可查看');
+    return;
+  }
+  e.preventDefault();
+  e.stopPropagation();
+  showLayer(k ? base.replace(/([?&]tab=)\w+/, '$1' + k) : base);
+}, true);
+
+/* 兜底：⌘K 面板等入口仍走 window.open，把结果页的窗口请求收进浮层。
+   neo.js 拿返回值登记到 RES_WINS（返回 null 会退化成整页跳转），故回一个可用的替身 */
+const origOpen = window.open;
+window.open = function (url, ...rest) {
+  const href = url == null ? '' : String(url);
+  /* 浮层里的那份结果页要换视角时就地跳转，别再往外弹窗口 */
+  if (/result\.html/.test(href) && embedded()) {
+    location.replace(href);
+    return { closed: false, focus() {}, close() {} };
+  }
+  if (/result\.html/.test(href) && !inResult()) {
+    showLayer(href);
+    return {
+      closed: false,
+      focus() {},
+      close() { shutLayer(); },
+      /* 评估页改了数据会 ping 已打开的结果页，转给浮层里的那份 */
+      get neoResultRefresh() {
+        const cw = $('#rlFrame') && $('#rlFrame').contentWindow;
+        return cw && typeof cw.neoResultRefresh === 'function'
+          ? cw.neoResultRefresh.bind(cw) : undefined;
+      }
+    };
+  }
+  return origOpen.apply(window, [url, ...rest]);
+};
+
+/* 入口文案：不再是「新页面」 */
+function resEntry(root) {
+  root.querySelectorAll('.res-out:not([data-flat-ro])').forEach(box => {
+    box.dataset.flatRo = '1';
+    const go = box.querySelector('.ro-go');
+    if (go) {
+      go.title = '在当前页的浮层里查看完整评估结果';
+      go.removeAttribute('target');
+    }
+    box.querySelectorAll('.ro-go i, .res-jump i').forEach(i => i.textContent = '⤢');
+    box.querySelectorAll('.res-jump').forEach(b =>
+      b.innerHTML = b.innerHTML.replace('在结果页查看', '直接看'));
+    const note = box.querySelector('.ro-note');
+    if (note) note.textContent = note.textContent
+      .replace('都在同一个结果页，按 tab 切换', '都在同一个浮层里，按 tab 切换')
+      .replace('都在同一个结果页', '都在同一个浮层里');
+  });
+}
+
+/* 嵌在浮层里时，结果页自己的顶栏（含「返回评估页」）是多余的 */
+function embedTrim() {
+  if (!embedded()) return;
+  document.body.classList.add('rl-embed');
+  const tb = $('#topbar');
+  if (tb) tb.hidden = true;
+}
+
 function watchReports() {
-  const tick = () => { pdfOnly(document); noFix(document); slimReport(document); chatSkin(document); depthPick(document); };
+  const tick = () => { shareBox(document); noFix(document); slimReport(document); chatSkin(document);
+    depthPick(document); resEntry(document); };
+  embedTrim();
   chatHead();
   tick();
   let queued = false;

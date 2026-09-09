@@ -621,3 +621,65 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .neo-depth-fld .depth-note .dn-row b { font-size: 13px; }
 .neo-depth-fld .depth-note .dn-row.on b { font-weight: 700; }
 .neo-depth-fld .depth-note .dn-row .dn-out { background: var(--surface-3); }
+
+
+/* ================================================================
+   19. 导出改分享：一个按钮 + 生成后的链接气泡
+   ================================================================ */
+/* 换按钮的活儿在 flat.js（shareBox），这里先压住旧的导出控件避免闪一下 */
+.rep-dl .dl-more, .rep-dl .dl-menu, .annot-bar [data-ex] { display: none !important; }
+
+.sh-wrap { position: relative; display: inline-flex; }
+.sh-pop {
+  position: absolute; top: calc(100% + 7px); right: 0; z-index: 60;
+  display: grid; gap: 7px; width: 380px; max-width: 76vw; padding: 12px 13px;
+  border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-1);
+  box-shadow: 0 12px 32px rgba(16, 24, 40, .14);
+  font-size: 12.5px; text-align: left; white-space: normal;
+}
+.sh-pop b { font-size: 13px; color: var(--text-primary); }
+.sh-pop .sh-row { display: flex; gap: 6px; }
+.sh-pop .sh-url {
+  flex: 1; min-width: 0; height: 28px; padding: 2px 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface-2); color: var(--text-secondary); font-size: 12px;
+}
+.sh-pop .hint-inline { line-height: 1.6; }
+
+
+/* ================================================================
+   20. 完整评估结果浮层：深度评估不再开新页面
+   浮层里嵌的就是结果页本身（result.html），逻辑在 flat.js（showLayer）
+   ================================================================ */
+.res-layer { position: fixed; inset: 0; z-index: 200; }
+.res-layer .rl-mask {
+  position: absolute; inset: 0; background: rgba(16, 24, 40, .34);
+  backdrop-filter: blur(2px); opacity: 0; transition: opacity .18s;
+}
+.res-layer.in .rl-mask { opacity: 1; }
+.res-layer .rl-panel {
+  position: absolute; inset: 28px; margin: 0 auto; max-width: 1460px;
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--surface-1);
+  box-shadow: 0 24px 64px rgba(16, 24, 40, .22);
+  opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s;
+}
+.res-layer.in .rl-panel { opacity: 1; transform: none; }
+.res-layer .rl-head {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  height: 48px; padding: 0 14px 0 18px; border-bottom: 1px solid var(--border);
+}
+.res-layer .rl-t { font-size: 14px; font-weight: 650; }
+.res-layer .rl-sub { font-size: 12.5px; color: var(--text-muted); }
+.res-layer .spacer { flex: 1; }
+.res-layer .rl-x {
+  height: 30px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--r-pill);
+  background: var(--surface-1); color: var(--text-secondary); font-size: 12.5px; cursor: pointer;
+}
+.res-layer .rl-x:hover { border-color: var(--accent); color: var(--accent); }
+.res-layer .rl-frame { flex: 1; min-height: 0; width: 100%; border: 0; display: block; }
+body.rl-on { overflow: hidden; }
+@media (max-width: 900px) { .res-layer .rl-panel { inset: 10px; } }
+
+/* 浮层里的那份结果页：顶栏收掉，版心占满浮层 */
+body.rl-embed .res-shell { height: 100vh; }

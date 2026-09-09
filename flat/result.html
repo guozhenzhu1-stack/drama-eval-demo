@@ -50,6 +50,10 @@
   </div>
 </main>
 
+<script>
+/* 嵌在评估页的结果浮层里时把父窗当 opener：result-page.js 靠 opener 与评估页共享同一份剧本数据 */
+if (window.parent !== window) { try { window.opener = window.parent; } catch (e) {} }
+</script>
 <script src="../js/mock.js"></script>
 <script src="../js/ui.js"></script>
 <script src="../neo/neo.js"></script>

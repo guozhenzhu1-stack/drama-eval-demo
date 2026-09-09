@@ -2,7 +2,7 @@
    风格 B · 剧本诊断优化：按上传体量分流
      ≤9 集（片段 / 单集 / 少集）→ 对话框内直接给出评估结果，右栏不出现
      ≥10 集 + 快速评估          → 评估报告直接摊在对话框右边
-     ≥10 集 + 深度评估          → 对话里给「查看完整评估结果」，正文在新页面
+     ≥10 集 + 深度评估          → 对话里给「查看完整评估结果」，正文在同页浮层里
    本期只做「问题检测与展示」：不出修改建议，也不提供任何改稿入口（一键修复 / 按建议
    改写 / 划选下指令 / 修改对比），FIXLOG 恒为空。
    替代 js/diagnose.js。顶层声明不能包进 IIFE：neo.js 的 neoStudio 桥以裸名读取
@@ -154,7 +154,7 @@ async function runEval() {
          <li>其次是伏笔维度 ${SCRIPT.dimReports.find(r => r.dim === 'seed').score} 分：3 条钩子级伏笔全部没闭环。</li>
          <li>第 3 集泼咖啡属平台常见退改点，命中合规规则库。</li>
        </ul>
-       评估报告与分集问题标注都在下面这个入口里，点开是一个新页面。
+       评估报告与分集问题标注都在下面这个入口里，点开在当前页的浮层里展示。
        <br><span class="hint-inline">本期只做问题检测与展示，不产出改写建议、也不代改剧本。</span>`);
 }
 
@@ -197,7 +197,7 @@ function showResult() {
   updateCounters();
 }
 
-/* 快速评估里点「升级为深度评估」：右栏收起，改成结果页入口 */
+/* 快速评估里点「升级为深度评估」：右栏收起，改成浮层入口 */
 /* neo.js 在调用这里之前已经把摘要条贴到了「快速评估完成」那条旧消息上，
    先摘掉它，再说新回复、再重算 —— placeResBar 会把入口挂到最新那条回复下方 */
 window.neoOnUpgrade = function () {
@@ -207,7 +207,7 @@ window.neoOnUpgrade = function () {
   if (old) old.remove();
   say('ai', `已按<b>深度评估</b>重新精读全本：在原评估报告之上补出<b>分集问题标注</b>，
     每处问题都落到「第几集 · 第几场 · 哪句台词」，并给出判断依据。
-    完整结果改在新页面看，入口就在下面。`);
+    完整结果在浮层里看，入口就在下面。`);
   showResult();
   scrollChat();
 };
@@ -306,7 +306,7 @@ function updateCounters() {
 }
 
 /* ---------- 对话路由 ---------- */
-const jump = (k, t) => `<button class="res-jump" type="button" data-res-jump="${k}">在结果页查看${t} <i>↗</i></button>`;
+const jump = (k, t) => `<button class="res-jump" type="button" data-res-jump="${k}">直接看${t} <i>⤢</i></button>`;
 
 function answer(t) {
   const ep = t.match(/第\s*(\d+)\s*集/);
@@ -350,7 +350,7 @@ function answer(t) {
       最强项是格式规范（88）与台词（76），最弱是伏笔（52）与逻辑（55）。`;
     if (FLOW === 'quick') return say('ai', base + `完整报告就在右边，含评级依据、分维度得分${
       (CHOSEN.platforms || []).length ? '与平台匹配度' : ''}。`);
-    return say('ai', base + '完整报告在结果页。' + jump('report', '评估报告'));
+    return say('ai', base + '完整报告在结果浮层里。' + jump('report', '评估报告'));
   }
   if (/导出|下载/.test(t)) return say('ai', FLOW === 'inline'
     ? '这次是对话内直接出结果，Demo 暂不提供导出；多集剧本走报告页时可导出 PDF。'
