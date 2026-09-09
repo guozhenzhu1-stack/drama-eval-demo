@@ -145,18 +145,42 @@ async function runEval() {
   say('ai', quick
     ? `快速评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，
        按 ${CHOSEN.dims.length} 个维度给出了得分、评级依据${
-         (CHOSEN.platforms || []).length ? '与平台匹配度' : ''}——报告就在右边，可以直接往下读。
+         (CHOSEN.platforms || []).length ? '与平台匹配度' : ''}。
        <br><span class="hint-inline">快速评估不逐场精读，因此没有「第几集 · 第几场 · 哪句台词」级别的标注；需要的话可以升级为深度评估。</span>`
+      + reportFileHtml()
     : `深度评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，共 <b>${c.issues} 处</b>问题：
        致命 ${c.p0}、严重 ${c.p1}、一般 ${c.p2}、轻微 ${c.p3}。
-       <ul>
-         <li>最该先看的是第 6 集「31% 股权凭空落地」（P0），它决定观众会不会觉得结局是硬翻盘。</li>
-         <li>其次是伏笔维度 ${SCRIPT.dimReports.find(r => r.dim === 'seed').score} 分：3 条钩子级伏笔全部没闭环。</li>
-         <li>第 3 集泼咖啡属平台常见退改点，命中合规规则库。</li>
-       </ul>
-       评估报告与分集问题标注都在下面这个入口里，点开在当前页的浮层里展示。
+       最该先看的是第 6 集「31% 股权凭空落地」（P0），它决定观众会不会觉得结局是硬翻盘；
+       其次是伏笔维度 ${SCRIPT.dimReports.find(r => r.dim === 'seed').score} 分，3 条钩子级伏笔全部没闭环；
+       第 3 集泼咖啡属平台常见退改点，命中合规规则库。
        <br><span class="hint-inline">本期只做问题检测与展示，不产出改写建议、也不代改剧本。</span>`);
+  if (quick) bindReportFile();
 }
+
+/* ---------- 快速评估：像文件附件一样的一行卡片 ---------- */
+/* 默认已经在右栏摊开报告（showResult 做的）；用户关掉右栏后，点这张卡片能再摊开一次，
+   不用重新触发评估 —— 右栏的关闭状态记在 studio 的 class 上，同一个 #panelReport 复用 */
+const reportFileHtml = () => `
+  <button class="rep-file" type="button" id="repFile">
+    <i class="rf-ico">📄</i>
+    <span class="rf-tx"><b>《${esc(SCRIPT.title)}》评估报告</b>
+      <em>${CHOSEN.dims.length} 个维度 · ${SCRIPT.grade} 级 / ${SCRIPT.score} 分</em></span>
+    <i class="rf-go">›</i>
+  </button>`;
+
+function openReportPane() {
+  const studio = $('.studio');
+  if (studio) studio.classList.remove('wide');
+  activateTab($('#wtabs'), 'panelReport');
+}
+
+function bindReportFile(root = document) {
+  $$('#repFile:not([data-rf])', root).forEach(btn => {
+    btn.dataset.rf = '1';
+    btn.onclick = openReportPane;
+  });
+}
+
 
 const repOpts = () => ({
   dims: CHOSEN.dims,
@@ -239,16 +263,9 @@ const dimsOf = list => {
     .map(d => ({ dim: d, list: list.filter(i => i.dim === d) }));
 };
 
-/* 深度评估的追问答案仍用小卡片（与结果页一致）；小体量走下面的自然语言 */
-function issHtml(i) {
-  return `
-  <div class="fres-iss" data-iss="${i.id}">
-    <div class="fi-top"><i class="sev sev-${i.sev}">${i.sev}</i>
-      <b>第 ${i.ep} 集｜${esc(i.title)}</b></div>
-    <div class="fi-q">原文「${esc(i.quote)}」</div>
-    <div class="fi-why"><b>判断依据：</b>${esc(i.why)}</div>
-  </div>`;
-}
+/* 深度评估的追问答案也走自然语言（与小体量一致），不再用卡片；
+   函数声明会提升，issLine 在下面定义也不影响调用顺序 */
+function issHtml(i) { return issLine(i); }
 
 /* ---------- 小体量：结果写成自然语言，不出卡片 ---------- */
 /* 一处问题就是一段话：落在第几集 → 原文是哪句 → 我为什么这么判断 */

@@ -142,6 +142,21 @@ function noFix(root) {
   root.querySelectorAll('.di-fix, .cmp-fix').forEach(n => n.remove());
   /* 分集问题标注：整本 / 本集 / 单条修复入口，划选下指令条 */
   root.querySelectorAll('#fixBook, #fixEp, [data-act="fix"], #selBar, .fix-summary').forEach(n => n.remove());
+  /* 问题卡「忽略」/「恢复」按钮：本期只做检测展示，不做筛选管理 */
+  root.querySelectorAll('[data-act="ignore"], [data-act="restore"]').forEach(n => n.remove());
+  /* 已忽略的问题不再是一个可操作的状态，折叠区也没有意义了 */
+  root.querySelectorAll('.ignored-zone').forEach(n => n.remove());
+  /* 问题标签定位：去掉正文里的下划线/跳转锚点与右侧问题卡的点击定位，两边各自静态展示 */
+  root.querySelectorAll('mark.iss:not([data-flat-mk])').forEach(m => {
+    m.dataset.flatMk = '1';
+    m.onclick = null;
+    m.classList.add('iss-static');
+  });
+  root.querySelectorAll('.iss-card:not([data-flat-ic])').forEach(c => {
+    c.dataset.flatIc = '1';
+    c.onclick = null;
+    c.classList.add('no-jump');
+  });
   /* 结果页：修改对比这一 tab 不再产出 */
   root.querySelectorAll('[role="tab"][data-rk="diff"], [data-res-jump="diff"]').forEach(n => n.remove());
   /* 标注卡里的「修改建议：」整行（判断依据要留着） */
@@ -343,12 +358,24 @@ function chatHead() {
   hd.appendChild(x);
 }
 
+/* 右侧工作台自带的关闭按钮（快速评估默认摊开报告，用户可以自己收起）：
+   与 »/« 走同一套 .wide 机制，收起后点对话里的报告文件卡片（reportFileHtml）再摊开 */
+function pwClose() {
+  const btn = $('#pwClose');
+  if (!btn || btn.dataset.pwx) return;
+  btn.dataset.pwx = '1';
+  btn.onclick = () => {
+    const studio = $('.studio');
+    if (studio) studio.classList.add('wide');
+  };
+}
+
 /* ---------- 7. 评估深度：说明文案本身就是选项，去掉上方的胶囊按钮 ---------- */
 /* 字段由 neo.js 的 injectDepth 注入（与风格 A 共用，不能改）：
    .lbl + [data-group=depth] 胶囊组 + .depth-note 里两段说明。
-   这里把胶囊组整块搬到隐藏槽位——neo.js 的 #briefGo 走 groupValue(card,'depth') 取值，
-   删掉就取不到深度了；搬走同时也去掉了 label 唯一的可聚焦控件，
-   免得点说明块被 label 转发成点胶囊，把选择弹回去 */
+   v17：改成一行开关——label 只留"评估深度"+ 当前选中项的说明句，右边一个两态switch；
+   胶囊组仍整块搬进隐藏槽位保活 groupValue，两段 .dn-row 说明文字挪进 switch 下面的一行提示里，
+   不再各占一段、不再需要点说明块选择 */
 function depthPick(root) {
   root.querySelectorAll('.neo-depth-fld:not([data-flat-dp])').forEach(fld => {
     const grp = fld.querySelector('[data-group=depth]');
@@ -367,40 +394,55 @@ function depthPick(root) {
     }
     slot.appendChild(grp);
 
-    const val = r => r.querySelector('b').textContent.trim();
-    const pick = r => {
-      rows.forEach(o => {
-        const on = o === r;
-        o.classList.toggle('on', on);
-        o.setAttribute('aria-checked', String(on));
-        o.tabIndex = on ? 0 : -1;
-      });
-      grp.querySelectorAll('.chip').forEach(c =>
-        c.setAttribute('aria-pressed', String(c.dataset.v === val(r))));
-    };
+    const info = rows.map(r => ({
+      name: r.querySelector('b').textContent.trim(),
+      out: r.querySelector('.dn-out').textContent.trim(),
+      text: r.querySelector('span').textContent.trim()
+    }));
+    const quick = info.find(x => x.name === '快速评估') || info[0];
+    const deep = info.find(x => x.name === '深度评估') || info[1];
 
-    note.setAttribute('role', 'radiogroup');
-    note.setAttribute('aria-label', '评估深度');
-    rows.forEach((r, i) => {
-      r.setAttribute('role', 'radio');
-      r.setAttribute('aria-checked', String(r.classList.contains('on')));
-      r.tabIndex = r.classList.contains('on') ? 0 : -1;
-      /* label 会把点击转发给它的表单控件，这里必须拦下默认行为 */
-      r.onclick = e => { e.preventDefault(); pick(r); };
-      r.onkeydown = e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(r); return; }
-        const d = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
-        if (!d) return;
-        e.preventDefault();
-        const n = rows[(i + d + rows.length) % rows.length];
-        pick(n); n.focus();
-      };
-    });
+    const lbl = fld.querySelector('.lbl');
+    note.remove();
+    const sw = document.createElement('div');
+    sw.className = 'dp-sw';
+    sw.innerHTML = `
+      <div class="dp-row">
+        <button class="dp-tg" type="button" role="switch" id="dpSwitch">
+          <i class="dp-kb"></i><span class="dp-lb dp-lb-q">${quick.name}</span><span class="dp-lb dp-lb-d">${deep.name}</span>
+        </button>
+        <span class="dp-out" id="dpOut"></span>
+      </div>
+      <p class="dp-tx" id="dpTx"></p>`;
+    fld.appendChild(sw);
+    const btn = $('#dpSwitch', sw), out = $('#dpOut', sw), tx = $('#dpTx', sw);
+
+    const paint = deepOn => {
+      const cur = deepOn ? deep : quick;
+      btn.setAttribute('aria-checked', String(deepOn));
+      btn.classList.toggle('on', deepOn);
+      out.textContent = cur.out;
+      tx.textContent = cur.text;
+    };
+    const pick = deepOn => {
+      paint(deepOn);
+      grp.querySelectorAll('.chip').forEach(c =>
+        c.setAttribute('aria-pressed', String(c.dataset.v === (deepOn ? deep.name : quick.name))));
+    };
+    btn.onclick = () => pick(btn.getAttribute('aria-checked') !== 'true');
+
     /* 默认选中项以胶囊组的现值为准（neo.js 默认深度评估） */
     const cur = grp.querySelector('.chip[aria-pressed=true]');
-    pick(rows.find(r => cur && val(r) === cur.dataset.v) || rows[rows.length - 1]);
+    paint(!cur || cur.dataset.v === deep.name);
+    if (lbl) {
+      const req = lbl.querySelector('.req'), hint = lbl.querySelector('.hint-inline');
+      lbl.textContent = '评估深度 ';
+      if (req) lbl.appendChild(req);
+      if (hint) lbl.appendChild(hint);
+    }
   });
 }
+
 
 /* ---------- 8. 深度评估的完整结果：不再开新页面，改成对话上方的浮层 ---------- */
 /* 结果正文仍由结果页那套代码渲染（result.html + result-page.js，与风格 A 共用），
@@ -531,7 +573,7 @@ function embedTrim() {
 
 function watchReports() {
   const tick = () => { shareBox(document); noFix(document); slimReport(document); chatSkin(document);
-    depthPick(document); resEntry(document); };
+    depthPick(document); resEntry(document); pwClose(); };
   embedTrim();
   chatHead();
   tick();
