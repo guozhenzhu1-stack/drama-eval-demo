@@ -88,47 +88,96 @@ async function runSteps(m, list, ms = 520) {
   }
 }
 
-/* ---------- ≥10 集：输入框上方出 brief 卡片（评估深度由 neo.js 注入） ---------- */
-/* 只留真正会改变评估口径的两项：评估维度 + 评估深度。
+/* ---------- ≥10 集：用自然语言问一句，而不是摆卡片 ---------- */
+/* 只问两件真正会改变评估口径的事：评估维度 + 评估深度。
+   胶囊组（dims/depth）还是要建出来——藏进隐藏槽位，好让 neo.js 的
+   injectDepth/groupValue/setDepth 这套依赖 DOM 结构的机制照常工作；
+   用户的自然语言回复解析后同步写回这两个胶囊组的 aria-pressed。
    制作方式 / 目标地区 / 目标投稿平台不再问，能从需求描述里解析就用，解析不到走默认 */
-function briefCard() {
-  return `
-  <div class="card brief" id="briefCard">
-    <div class="card-head">确认评估口径</div>
-    <div class="card-body">
-      <label class="fld"><span class="lbl">评估维度（可多选）</span>
-        ${chipGroup('dims', DIMS.map(d => ({ v: d.id, label: d.name, color: d.color })), { multi: true, selected: pickDims() })}</label>
-      <div class="err" id="briefErr" hidden></div>
-      <label class="fld"><span class="lbl">其他评估要求</span>
-        <textarea id="briefMore" rows="2" placeholder="例如：重点看前 3 集付费卡点，帮我核一遍伏笔是否都回收">${esc(P.rest)}</textarea></label>
-      <div class="brief-foot">
-        <button class="btn btn-primary" id="briefGo">开始评估</button>
-      </div>
-    </div>
-  </div>`;
+function hiddenGroups() {
+  const box = document.createElement('div');
+  box.className = 'neo-locked';
+  box.hidden = true;
+  box.innerHTML = chipGroup('dims', DIMS.map(d => ({ v: d.id, label: d.name, color: d.color })),
+    { multi: true, selected: pickDims() })
+    + chipGroup('depth', [DEPTH_Q, DEPTH_D], { selected: [DEPTH_D] });
+  return box;
+}
+const DEPTH_Q = '快速评估', DEPTH_D = '深度评估';
+
+function setDimsGroup(box, dims) {
+  box.querySelectorAll('[data-group=dims] .chip').forEach(c =>
+    c.setAttribute('aria-pressed', String(dims.includes(c.dataset.v))));
+}
+function setDepthGroup(box, deep) {
+  box.querySelectorAll('[data-group=depth] .chip').forEach(c =>
+    c.setAttribute('aria-pressed', String(c.dataset.v === (deep ? DEPTH_D : DEPTH_Q))));
+}
+
+/* 从用户那句自然语言回复里解析「维度」与「深度」，解析不到的返回 null 交给上层追问 */
+function parseBriefReply(t) {
+  const dims = [...new Set(Object.keys(DIM_KEYS).filter(k => t.includes(k)).map(k => DIM_KEYS[k]))];
+  const all = /全部|所有|都要|都测|都评/.test(t);
+  const useDefault = /默认维度|默认/.test(t);
+  let deep = null;
+  if (/快速评估|快速|不用深度|不用精读/.test(t) && !/深度评估/.test(t)) deep = false;
+  else if (/深度评估|深度|精读|逐场|逐集/.test(t)) deep = true;
+  return { dims: (all || useDefault) ? DEFAULT_DIMS : (dims.length ? dims : null), deep };
+}
+
+function askBriefHtml() {
+  return `<p>这个体量先确认两件事：</p>
+    <p>1. 想按哪些维度评估？可选：<b>${DIMS.map(d => d.name).join('、')}</b>
+      ——不确定就直接说"按默认维度"，我用<b>${DEFAULT_DIMS.map(dimName).join('、')}</b>这 7 个。</p>
+    <p>2. 想要<b>快速评估</b>（仅评估报告，速度快）还是<b>深度评估</b>
+      （评估报告 + 分集问题标注，定位到「第几集 · 第几场 · 哪句台词」，耗时约 3 倍）？
+      不确定就直接说"深度评估"，这也是默认档。</p>
+    <p class="hint-inline">你可以一句话一起回，比如「按伏笔、逻辑、节奏几个维度，深度评估」；
+      也可以补一句其他要求，比如「重点看前 3 集付费卡点」。</p>`;
 }
 
 function startBrief() {
-  const m = say('ai', `已解析剧本结构：<b>${UP.eps ? UP.eps + ' 集' : '多集'} / 约 ${fmt(UP.words)} 字</b>${
-    UP.eps > SCRIPT.meta.parsedEps ? `（示例仅展开前 ${SCRIPT.meta.parsedEps} 集）` : ''}。
-    这个体量先定一下口径：` + briefCard());
-  bindChipGroups(m);
-  $('#briefGo', m).onclick = () => {
-    const dims = groupValue(m, 'dims');
-    const err = $('#briefErr', m);
-    if (!dims.length) {
-      err.hidden = false;
-      err.textContent = '请至少选择一个评估维度';
+  const box = hiddenGroups();
+  document.body.appendChild(box);
+
+  say('ai', `已解析剧本结构：<b>${UP.eps ? UP.eps + ' 集' : '多集'} / 约 ${fmt(UP.words)} 字</b>${
+    UP.eps > SCRIPT.meta.parsedEps ? `（示例仅展开前 ${SCRIPT.meta.parsedEps} 集）` : ''}。` + askBriefHtml());
+
+  function confirmAndRun(dims, deep, extra) {
+    setDimsGroup(box, dims);
+    setDepthGroup(box, deep);
+    window.NEO_DEPTH = deep ? 'deep' : 'quick';
+    document.documentElement.dataset.depth = window.NEO_DEPTH;
+    CHOSEN = { mode: P.mode || '真人短剧剧本', pay: P.pay || '付费', region: P.region || '中国',
+      platforms: P.platforms || [], dims, more: extra || '' };
+    say('ai', `已确认：<b>${dims.map(dimName).join('、')}</b> · 评估深度 <b>${deep ? DEPTH_D : DEPTH_Q}</b>
+      ${extra ? `<br>补充要求：${esc(extra)}` : ''}`);
+    runEval();
+  }
+
+  /* 首次上传要求里已经带出维度/深度信息，能一次问够就不追问 */
+  BRIEF_PENDING = { dims: P.dims || null, deep: null, more: P.rest && !P.dims ? P.rest : '' };
+
+  BRIEF_ANSWER = t => {
+    const r = parseBriefReply(t);
+    if (r.dims) BRIEF_PENDING.dims = r.dims;
+    if (r.deep !== null) BRIEF_PENDING.deep = r.deep;
+    if (!/^(按默认维度|默认维度|默认)$/.test(t.trim())) BRIEF_PENDING.more = t;
+
+    const missing = [];
+    if (!BRIEF_PENDING.dims) missing.push('评估维度（不确定就说"按默认维度"）');
+    if (BRIEF_PENDING.deep === null) missing.push('评估深度（快速评估 / 深度评估，不确定就说"深度评估"）');
+    if (missing.length) {
+      say('ai', `还差一点：${missing.join('、')}。`);
       return;
     }
-    CHOSEN = { mode: P.mode || '真人短剧剧本', pay: P.pay || '付费', region: P.region || '中国',
-      platforms: P.platforms || [], dims, more: $('#briefMore', m).value.trim() };
-    $('#briefCard').outerHTML = `<div class="brief-done">已确认：<b>${dims.map(dimName).join('、')}</b>
-      · 评估深度 <b>${window.NEO_DEPTH === 'quick' ? '快速评估' : '深度评估'}</b>
-      ${CHOSEN.more ? `<br>补充要求：${esc(CHOSEN.more)}` : ''}</div>`;
-    runEval();
+    BRIEF_ANSWER = null;
+    confirmAndRun(BRIEF_PENDING.dims, BRIEF_PENDING.deep, BRIEF_PENDING.more);
   };
 }
+let BRIEF_ANSWER = null;
+let BRIEF_PENDING = null;
+
 
 const BIG_STEPS = ['剧本结构化解析', '分集分维度问题检测', '合规规则库比对（更新至 2026-08-28）',
   '定向投稿匹配度计算', '汇总评估报告'];
@@ -384,7 +433,8 @@ function send() {
   if (!t) return;
   say('me', esc(t));
   $('#chatInput').value = '';
-  if (!FLOW) return say('ai', '先在上面的卡片里确认评估口径与评估深度，评完我就能按维度告诉你问题在哪。');
+  if (BRIEF_ANSWER) return BRIEF_ANSWER(t);
+  if (!FLOW) return say('ai', '先回答上面的两个问题（评估维度、评估深度），确认后我就能开始评估。');
   answer(t);
 }
 $('#sendBtn').onclick = send;
