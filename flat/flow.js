@@ -195,7 +195,8 @@ async function runEval() {
     ? `快速评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，
        按 ${CHOSEN.dims.length} 个维度给出了得分、评级依据${
          (CHOSEN.platforms || []).length ? '与平台匹配度' : ''}。
-       <br><span class="hint-inline">快速评估不逐场精读，因此没有「第几集 · 第几场 · 哪句台词」级别的标注；需要的话可以升级为深度评估。</span>`
+       <br><span class="hint-inline">快速评估不逐场精读，因此没有「第几集 · 第几场 · 哪句台词」级别的标注；
+       想升级为深度评估的话，直接在下面回复"深度评估"即可。</span>`
       + reportFileHtml()
     : `深度评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，共 <b>${c.issues} 处</b>问题：
        致命 ${c.p0}、严重 ${c.p1}、一般 ${c.p2}、轻微 ${c.p3}。
@@ -374,7 +375,18 @@ function updateCounters() {
 /* ---------- 对话路由 ---------- */
 const jump = (k, t) => `<button class="res-jump" type="button" data-res-jump="${k}">直接看${t} <i>⤢</i></button>`;
 
+/* 快速评估完成后，用户在对话框里直接回复"深度评估"即可原地升级——
+   不需要再摆一个单独的按钮；升级动作复用 neo.js 的 window.neoUpgrade()，
+   它会把 window.NEO_DEPTH 设为 deep、摘掉页面上所有 .neo-upsell 节点，
+   再调用 flow.js 自己的 window.neoOnUpgrade（下面定义）接手对话与右栏重绘 */
+const DEEP_UPGRADE_RE = /^(深度评估|升级为?深度评估|升级评估|要深度评估|换成?深度评估)$/;
+
 function answer(t) {
+  if (FLOW === 'quick' && DEEP_UPGRADE_RE.test(t.trim())) {
+    window.neoUpgrade();
+    return;
+  }
+
   const ep = t.match(/第\s*(\d+)\s*集/);
 
   /* 本期只做检测：所有改稿类指令统一说明边界，不再动剧本 */

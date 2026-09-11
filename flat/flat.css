@@ -736,3 +736,12 @@ mark.iss.iss-static:hover, mark.iss.iss-static.focus { box-shadow: none; outline
 .res-out.in-chat.flat-slim .ro-foot { display: none; }
 .res-out.in-chat.flat-slim .ro-go { margin-top: 2px; }
 
+/* ================================================================
+   24. 快速评估报告：不在报告面板内出「升级为深度评估」引导条
+   report-neo.js 在 where==='report' 时渲染的 .neo-upsell 没有 .in-chat
+   修饰类、也没有 id，只出现在 .rep-doc 内部——用父级限定精确摘掉这一份，
+   对话气泡里那份（.neo-upsell.in-chat#neoUpsellChat）不受影响，升级入口
+   仍保留在对话框里（配合本文件 flow.js 的自然语言触发）
+   ================================================================ */
+.rep-doc > .neo-upsell { display: none; }
+

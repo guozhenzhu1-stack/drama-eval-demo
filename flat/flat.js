@@ -108,11 +108,11 @@ const bindShare = box => {
 };
 
 function shareBox(root) {
-  /* 报告工具条：导出按钮与格式菜单整块换成分享 */
+  /* 评估报告工具条：本期不提供分享/导出入口，整块摘掉——
+     .rep-dl 前面是 .spacer（flex:1），摘掉后标题仍靠左，不留空档 */
   root.querySelectorAll('.rep-dl:not([data-flat-sh])').forEach(box => {
     box.dataset.flatSh = '1';
-    box.innerHTML = shareBtn('report');
-    bindShare(box);
+    box.remove();
   });
   /* 分集问题标注：导出 Word / 导出 Excel 换成同一个分享按钮 */
   root.querySelectorAll('.annot-bar:not([data-flat-sh])').forEach(bar => {
