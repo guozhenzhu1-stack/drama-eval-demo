@@ -591,14 +591,8 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .rep-doc .rpanel > .doc-h3 em { display: none; }
 
 /* 两段式重排（flat.js 的 restructureReport）：分维度得分条整块摘掉、
-   定向投稿匹配度整块摘掉、合规性评估搪出「三」所在的 section，直接挂在
-   .doc-page 下、footer 之前。.doc-page 自带左右 padding，直接子元素与
-   .doc-sec 同一条基准线，这里只补一条分隔线与上间距，不再重复加左右边距 */
-.rep-doc .doc-page > .rpanel.rep-tail {
-  margin-top: var(--sp-6);
-  padding-top: var(--sp-5);
-  border-top: 1px solid var(--border);
-}
+   定向投稿匹配度整块摘掉、合规性评估整段摘掉，报告只剩「一 评估结论」+
+   「二 分维度详细评估」两段，不再需要收尾节的分隔线样式 */
 
 
 /* ================================================================

@@ -216,15 +216,13 @@ const DIM_NAME_TO_ID = (typeof DIMS !== 'undefined' ? DIMS : []).reduce((m, d) =
 /* ---------- 评估报告：两段式重排 ----------
    总评结论（评级卡 + 一 评估结论与评级依据，去掉分维度得分条）
    分维度详细评估（去掉定向投稿匹配度，只留分维度评估卡片）
-   合规性评估搪到报告最下面（doc-foot 之前），独立成收尾一段
-   三块内容原来分散在「二」「三」两个 section 里，risk 面板还要跨 section 搪位，
-   纯 CSS 排不动（.rpanel 与「二」的得分条不在同一层级），所以直接动 DOM 节点 */
+   合规性评估整段不要——本期报告不再单独出这一节
+   三块内容原来分散在「二」「三」两个 section 里，所以直接动 DOM 节点 */
 function restructureReport(root) {
   root.querySelectorAll('.rep-doc:not([data-flat-restruct])').forEach(doc => {
     doc.dataset.flatRestruct = '1';
     const page = doc.querySelector('.doc-page');
     if (!page) return;
-    const foot = page.querySelector('.doc-foot');
     const secs = [...page.querySelectorAll(':scope > .doc-sec')];
     const secDims = secs[1];   /* 二 分维度得分 */
     const secDetail = secs[2]; /* 三 详细评估：定向投稿匹配度 / 合规性评估 / 分维度评估 */
@@ -237,16 +235,9 @@ function restructureReport(root) {
     const matchPanel = secDetail.querySelector('.rpanel[data-rp="match"]');
     if (matchPanel) matchPanel.remove();
 
-    /* 合规性评估搪到报告最下面，作为独立一节；跟原来的三级序号（3.x）脱钩，
-       另起一个不带序号的小标题，避免和上面分维度评估的编号混在一起 */
+    /* 合规性评估整段不要 */
     const riskPanel = secDetail.querySelector('.rpanel[data-rp="risk"]');
-    if (riskPanel) {
-      const h3 = riskPanel.querySelector(':scope > .doc-h3');
-      if (h3) h3.innerHTML = `<i>四</i>合规性评估${h3.querySelector('em') ? h3.querySelector('em').outerHTML : ''}`;
-      riskPanel.classList.add('rep-tail');
-      if (foot) foot.insertAdjacentElement('beforebegin', riskPanel);
-      else page.appendChild(riskPanel);
-    }
+    if (riskPanel) riskPanel.remove();
 
     /* 分维度评估留在「三」里，标题不用再说「三」（前面的匹配度/合规已经搬走或消失） */
     const h2 = secDetail.querySelector(':scope > h2');
@@ -371,8 +362,9 @@ function slimReport(root) {
       if (q) q.textContent = q.textContent.replace(/^\s*质量评级[^·]*·\s*/, '');
     });
     doc.querySelectorAll('.db-sum .rs-tag').forEach(n => n.remove());
+    /* 本期不做分集问题标注的跳转入口，这句提示没有落点，直接摘掉整个 .rp-note */
     const dn = doc.querySelector('.rpanel[data-rp="dims"] .rp-note');
-    if (dn) dn.textContent = '点「第 N 集」可跳到分集问题标注对应位置。';
+    if (dn) dn.remove();
   });
 }
 
