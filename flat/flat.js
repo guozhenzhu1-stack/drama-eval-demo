@@ -170,13 +170,13 @@ function gradeReport(root) {
         const g = gradeFromScore(scoreNum);
         badge.className = 'grade grade-' + g;
         badge.textContent = g;
-        scoreM.textContent = `综合 ${scoreNum} 分 · 整体评级 ${g} 级`;
       }
     }
     const lead = doc.querySelector('.doc-lead');
     if (lead) lead.textContent = OVERALL_SUM;
-    const verdictSpan = doc.querySelector('.doc-headline .dh-tx > span');
-    if (verdictSpan) verdictSpan.remove();
+    /* 顶部评分/评级简化：只保留左侧仪表盘圆（大字母 + 分数）。右侧「综合 X 分 ·
+       整体评级 X 级」文字行连同评级判词整块（.dh-tx）由 flat.css 隐藏，不在这里删——
+       neo.js 的 gauge() 要读 .dh-tx 里的「综合 X 分」算分，删掉会和它的时序打架 */
     const sec = doc.querySelector('.doc-sec');
     if (sec) { const p2 = sec.querySelectorAll('p')[1]; if (p2) p2.remove(); }
 
@@ -252,6 +252,27 @@ function restructureReport(root) {
       const i = dimsH3.querySelector('i');
       if (i) i.remove();
     }
+  });
+}
+
+/* ---------- 评估结果只展示 P0/P1 ----------
+   分维度详细评估的问题卡片只保留致命(P0)/严重(P1)，一般(P2)/轻微(P3)不再列出；
+   卡头「问题 N 处」跟着只算保留下来的 P0/P1；某维度全被过滤空了，给一句占位说明 */
+function majorOnly(root) {
+  root.querySelectorAll('.rep-doc:not([data-flat-major])').forEach(doc => {
+    doc.dataset.flatMajor = '1';
+    doc.querySelectorAll('.dim-block').forEach(block => {
+      const list = block.querySelector('.db-list');
+      if (!list) return;
+      list.querySelectorAll('.db-iss').forEach(iss => {
+        const sev = (iss.querySelector('.sev') || {}).textContent || '';
+        if (!/P0|P1/.test(sev)) iss.remove();
+      });
+      const cnt = block.querySelector('.db-cnt b');
+      if (cnt) cnt.textContent = list.querySelectorAll('.db-iss').length;
+      if (!list.querySelector('.db-iss') && !list.querySelector('.db-none'))
+        list.innerHTML = '<div class="db-none">本维度无致命（P0）或严重（P1）级问题。</div>';
+    });
   });
 }
 
@@ -705,7 +726,7 @@ function resSlim(root) {
 
 function watchReports() {
   const tick = () => { shareBox(document); noFix(document); gradeReport(document); restructureReport(document);
-    slimReport(document); chatSkin(document); depthPick(document); resEntry(document); resSlim(document); pwClose(); };
+    majorOnly(document); slimReport(document); chatSkin(document); depthPick(document); resEntry(document); resSlim(document); pwClose(); };
   embedTrim();
   chatHead();
   tick();

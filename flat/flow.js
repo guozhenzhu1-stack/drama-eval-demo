@@ -18,6 +18,8 @@ let CHOSEN = { dims: DEFAULT_DIMS, platforms: [] };
 let FLOW = '';                                  /* inline | quick | deep */
 const chat = $('#chatScroll');
 const SEVN = ['P0', 'P1', 'P2', 'P3'];
+/* 本期评估结果只展示致命(P0)/严重(P1)，一般(P2)/轻微(P3)不再列出 */
+const isMajor = i => i.sev === 'P0' || i.sev === 'P1';
 
 /* ---------- 本次上传的体量：首页把解析结果带在 URL 上 ---------- */
 const REQ = qs.get('req') || '';
@@ -198,8 +200,8 @@ async function runEval() {
        <br><span class="hint-inline">快速评估不逐场精读，因此没有「第几集 · 第几场 · 哪句台词」级别的标注；
        想升级为深度评估的话，直接在下面回复"深度评估"即可。</span>`
       + reportFileHtml()
-    : `深度评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，共 <b>${c.issues} 处</b>问题：
-       致命 ${c.p0}、严重 ${c.p1}、一般 ${c.p2}、轻微 ${c.p3}。
+    : `深度评估完成，综合评级 <b>${SCRIPT.grade}（${SCRIPT.score} 分）</b>，共 <b>${c.issues} 处</b>P0/P1 级问题：
+       致命 ${c.p0}、严重 ${c.p1}（本期评估结果只展示致命/严重级问题）。
        最该先看的是第 6 集「31% 股权凭空落地」（P0），它决定观众会不会觉得结局是硬翻盘；
        其次是伏笔维度 ${SCRIPT.dimReports.find(r => r.dim === 'seed').score} 分，3 条钩子级伏笔全部没闭环；
        第 3 集泼咖啡属平台常见退改点，命中合规规则库。
@@ -241,7 +243,7 @@ const repOpts = () => ({
 /* 报告与摘要条只统计所选维度内的问题（countByDims），对话里的口径要跟它一致，
    不能直接用 SCRIPT.stats.issues —— 默认维度不含「格式规范」，会多算 */
 function scoped() {
-  const list = ALL_ISSUES().filter(i => !i.ignored && CHOSEN.dims.includes(i.dim));
+  const list = ALL_ISSUES().filter(i => !i.ignored && CHOSEN.dims.includes(i.dim) && isMajor(i));
   const n = s => list.filter(i => i.sev === s).length;
   return { issues: list.length, p0: n('P0'), p1: n('P1'), p2: n('P2'), p3: n('P3') };
 }
@@ -293,7 +295,7 @@ const SMALL_STEPS = ['剧本结构化解析', '分维度问题检测', '合规�
 function covered() {
   const all = SCRIPT.episodes.filter(e => e.no <= UP.cover)
     .flatMap(e => e.issues)
-    .filter(i => !i.ignored && CHOSEN.dims.includes(i.dim))
+    .filter(i => !i.ignored && CHOSEN.dims.includes(i.dim) && isMajor(i))
     .sort((a, b) => SEVN.indexOf(a.sev) - SEVN.indexOf(b.sev) || a.ep - b.ep);
   return UP.part ? all.slice(0, 2) : all;
 }
@@ -366,7 +368,7 @@ async function runSmall() {
 
 /* ---------- 计数：本期只有「待看问题数」，没有改稿产物 ---------- */
 function updateCounters() {
-  const open = ALL_ISSUES().filter(i => !i.ignored && CHOSEN.dims.includes(i.dim)).length;
+  const open = ALL_ISSUES().filter(i => !i.ignored && CHOSEN.dims.includes(i.dim) && isMajor(i)).length;
   const c = $('#tabIssueCnt'), t = $('#tabDiff');
   if (c) c.textContent = open;
   if (t) t.hidden = true;                       /* 修改对比不再产出 */
@@ -397,9 +399,11 @@ function answer(t) {
 
   if (ep) {
     const no = +ep[1];
-    const list = (FLOW === 'inline' ? covered() : ALL_ISSUES()).filter(i => i.ep === no && !i.ignored);
-    if (!list.length) return say('ai', `第 ${no} 集不在本次评估范围内${
+    const raw = (FLOW === 'inline' ? covered() : ALL_ISSUES()).filter(i => i.ep === no && !i.ignored);
+    const list = raw.filter(isMajor);
+    if (!raw.length) return say('ai', `第 ${no} 集不在本次评估范围内${
       FLOW === 'inline' ? `（这次只评了${VOL}）` : `，示例数据只展开了前 ${SCRIPT.meta.parsedEps} 集`}。`);
+    if (!list.length) return say('ai', `第 ${no} 集没有致命（P0）或严重（P1）级问题，本期评估结果只展示这两级。`);
     if (FLOW === 'inline')
       return say('ai', `<div class="fp"><p>第 ${no} 集我读到 <b>${list.length} 处</b>问题（${sevText(list)}），逐条说：</p>
         ${list.map(issLine).join('')}</div>`);

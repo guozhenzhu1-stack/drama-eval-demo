@@ -571,7 +571,14 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .rep-doc .doc-info,
 .rep-doc .doc-kicker,
 .rep-doc .doc-note,
+.rep-doc .doc-byline,
 .rep-doc .pf-tip { display: none !important; }
+
+/* 顶部评分/评级简化：只留仪表盘圆（大字母 + 分数），隐去右侧
+   「综合 X 分 · 整体评级 X 级」文字行与评级判词（.dh-tx 整块） */
+.rep-doc .doc-headline .dh-tx { display: none !important; }
+/* 文字行撤掉后评级卡不再撑满整行，收成刚好裹住圆环的一块 */
+.rep-doc .doc-headline { display: inline-flex; }
 
 /* 信息表撤掉后，评级卡自己就是封面的收尾 */
 .rep-doc .doc-headline { margin-bottom: 0; }
