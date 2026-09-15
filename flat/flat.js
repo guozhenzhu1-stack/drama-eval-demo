@@ -294,8 +294,8 @@ function noFix(root) {
   });
   root.querySelectorAll('.ro-note').forEach(n =>
     swap(n, /评估报告 \/ 分集问题标注 \/ 修改对比 都在同一个结果页/, '评估报告 / 分集问题标注 都在同一个结果页'));
-  root.querySelectorAll('.doc-foot > span').forEach(n =>
-    swap(n, /所列问题、依据与建议/, '所列问题与判断依据'));
+  /* 页脚只保留报告号与生成时间，AI 免责/说明那句整条撤掉 */
+  root.querySelectorAll('.doc-foot > span:not(.doc-foot-no)').forEach(n => n.remove());
   root.querySelectorAll('.dn-row span, .up-tx span').forEach(n => {
     swap(n, /，\s*并给出判断依据与可执行的改写建议。?/, '，并给出每处问题的判断依据。');
     swap(n, /耗时与积分约为快速评估的 3 倍/, '耗时约为快速评估的 3 倍');
@@ -311,8 +311,9 @@ function slimReport(root) {
     doc.dataset.flatSlim = '1';
 
     /* 封面：标题上方那行小字与左上角的「剧本评估报告」重复；
-       信息表里的体量、维度、问题数在结论段里都说了，生成时间与报告号在页脚 */
-    doc.querySelectorAll('.doc-kicker, .doc-info').forEach(n => n.remove());
+       信息表里的体量、维度、问题数在结论段里都说了，生成时间与报告号在页脚；
+       剧本名下方的「编剧 … · 制作方式 · 地区」署名行也不再展示 */
+    doc.querySelectorAll('.doc-kicker, .doc-info, .doc-byline').forEach(n => n.remove());
     /* 结论那句评级判词已经在上面的评级卡里，段首不用再说一遍 */
     const lead = doc.querySelector('.doc-lead');
     if (lead) lead.innerHTML = lead.innerHTML.replace(/——[^。]*。\s*$/, '。');
