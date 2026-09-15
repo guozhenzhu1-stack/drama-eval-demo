@@ -574,6 +574,9 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .rep-doc .doc-byline,
 .rep-doc .pf-tip { display: none !important; }
 
+/* 分维度评估卡去掉维度色点，保留维度名 + 评级评分 */
+.rep-doc .dim-block .card-head .db-dot { display: none !important; }
+
 /* 顶部评级圆环整块去掉；评级与评分改到「总评结论」标题下单独加粗一行（.rep-grade） */
 .rep-doc .doc-headline { display: none !important; }
 .rep-doc .rep-grade { margin: 0 0 12px; }
@@ -709,9 +712,10 @@ mark.iss.iss-static:hover, mark.iss.iss-static.focus { box-shadow: none; outline
 .iss-card.no-jump:hover { box-shadow: none; background: none; }
 
 /* 去掉分集问题标注里按维度上色的小圆点：维度筛选胶囊 + 问题分组标题各一个。
-   sev-dots（P0/P1 严重度圆点）是 .sev-dots i，不在此选择器内，保留不动 */
+   左侧分集目录里的严重度色点（.sev-dots）也一并去掉 */
 .annot #dimFilter .chip .dot,
-.annot .issue-col .dim-group .dg-head .dot { display: none !important; }
+.annot .issue-col .dim-group .dg-head .dot,
+.annot .ep-list .ep-item .sev-dots { display: none !important; }
 
 /* ================================================================
    22. 快速评估报告：像文件附件一样的一行卡片 + 右侧工作台关闭按钮
