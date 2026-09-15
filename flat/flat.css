@@ -571,8 +571,6 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 .rep-doc .doc-info,
 .rep-doc .doc-kicker,
 .rep-doc .doc-note,
-.rep-doc .rtab .rt-main em,
-.rep-doc .rpanel > .doc-h3,
 .rep-doc .pf-tip { display: none !important; }
 
 /* 信息表撤掉后，评级卡自己就是封面的收尾 */
@@ -583,7 +581,14 @@ body.sb-fold .sb-item { justify-content: center; padding: 0; }
 /* 维度标题行只留「维度名 · 分数 · 问题数」 */
 .rep-doc .dim-block > .card-head { gap: 9px; }
 .rep-doc .db-sum p { margin: 0; }
-.rep-doc .rtab { padding: 11px 14px; }
+
+/* 「三 详细评估」去 tab 化：三部分从上到下依次展开，不再点击切换。
+   tab 标签栏整条撤掉，每部分原来藏在 tab 里的标题（.doc-h3）当作
+   普通小节标题露出来，取代原来的 tab 副标题（.rt-main em 已随标签栏一起消失） */
+.rep-doc .rtabs-wrap { display: none !important; }
+.rep-doc .rpanel { display: block !important; animation: none !important; }
+.rep-doc .rpanel > .doc-h3 { display: block !important; margin-top: var(--sp-5); }
+.rep-doc .rpanel > .doc-h3 em { display: none; }
 
 
 /* ================================================================

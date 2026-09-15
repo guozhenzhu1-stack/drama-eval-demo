@@ -137,6 +137,82 @@ const swap = (el, re, to) => {
   el.innerHTML = el.innerHTML.replace(re, to);
 };
 
+/* ---------- 评估报告：三级评分体系（S/A/B）+ 定性结论重写 + 详细评估去 tab 化 ----------
+   评级映射改为 S(90-100) / A(80-89) / B(0-79)，从既有 score 数字重新计算，
+   覆盖 mock 数据里按旧五级（S/A/B/C/D）给的字母；定性结论文字（整体 + 每个维度）
+   全部换成新写的一段话，含判断依据与方向性建议，不做逐句改写级别的建议（那部分仍由 noFix 去掉） */
+const gradeFromScore = s => s >= 90 ? 'S' : s >= 80 ? 'A' : 'B';
+
+const OVERALL_SUM = '综合 66 分（B 级）。伏笔（52 分）与剧情逻辑（55 分）是本稿最弱的两个维度，均低于及格线，需优先修：伏笔（一年契约、代驾误会、男主持股）三条钩子均未闭环，逻辑上第 6 集「31% 股权」凭空取胜，是结局最大硬伤。节奏（62 分）与故事线（68 分）次要，格式规范（88 分）与台词（76 分）已达标，暂不用动。';
+
+const DIM_SUM = {
+  story: '「苏晚拿回苏氏」主线在第 1 集立住，但第 3、5 两集高潮场都由男主完成动作，女主在自己的爽点里全程被动，主线在这两集出现空转。判断依据：第 3 集冲突未产出主线抓手，第 5 集身份揭穿由陆决主导。建议：把这两场的关键动作改成女主自己完成，男主只做背书或助攻。',
+  logic: '三处动机与能力断裂，最严重的是第 6 集「31% 股权」——前五集从未出现，且与第 1 集「苏家一夜破产」直接冲突，结局靠观众没见过的新信息取胜，弃剧风险最高。判断依据：第 1、3、6 集均有能力与资源上的断层。建议：把股权线索提前到第 1、3 集分两次埋，第 6 集只做回收。',
+  pace: '首集钩子落在 1 分 40 秒，晚于付费短剧 45 秒的安全线；第 4 集资金危机在同一场内被情绪戏消解，未形成倒计时压力。判断依据：第 1 集退婚戏铺陈过长，第 4 集危机缺少后续进度提示。建议：母亲劝签压成一句前置钩子，交割危机加 72 小时倒计时并在第 5、6 集各提示一次。',
+  role: '陆决的克制人设在第 2 集立得漂亮，但第 4 集越界行为没有触发事件，读起来是为了名场面强行改行为，人物不自洽。判断依据：第 2 集「我不碰你」与第 4 集玄关强吻之间无情感递进。建议：把董事会羞辱写成触发点，让第 4 集的破界是失控而非套路，并补一句自我确认台词。',
+  line: '女主台词有锋利度，但男主与反派仍有「靠嘴说人设」的功能化表达，反派崩溃词偏套路，缺少个性与可信证据。判断依据：第 1 集男主自报能力过白，第 3 集反派台词只贬损不推进，第 5 集崩溃词为通用模板。建议：让反派台词落到具体证据上，崩溃场改用画面代替台词。',
+  seed: '本稿最弱维度：三条钩子级伏笔（一年契约、代驾误会、男主持股）均未闭环，其中两条与已写设定直接冲突，是全稿性价比最低的浪费。判断依据：第 2 集契约后续 4 集未再提及，第 6 集男主持股来源与第 4 集设定矛盾。建议：三条伏笔各安排一次中途回收，男主持股改成第 4 集危机的直接结果。',
+  fmt: '场景头、时间内外景、人物出场标注基本规范，唯一问题是少量动作描写混入了演员的内心判断，拍摄指向不够明确。判断依据：第 1 集「低头笑了一下」属内心判断而非可拍摄动作。建议：把这类描写换成镜别加动作的可执行写法，其余场次基本无需改动，是本稿最强项。',
+  risk: '无涉政涉黄内容，唯一风险点在第 3 集：当众泼咖啡后没有第三方制止、也没有后果交代，命中平台「以暴制暴」常见退改项。判断依据：第 3 集冲突桥段缺少制止动作与代价承担。建议：把「泼咖啡」换成当场亮出证据的证据反制，爽感不降，同时避开退改风险。'
+};
+
+function gradeReport(root) {
+  root.querySelectorAll('.rep-doc:not([data-flat-grade])').forEach(doc => {
+    doc.dataset.flatGrade = '1';
+
+    /* 整体：评级卡上的大字母 + 「整体评级 X 级」文字 + 结论段替换成新写的一段话
+       neo.js 的 gauge() 会在 .grade 外面再包一层 .neo-gauge 环形进度条，选择器要能兼容包了一层的情况 */
+    const badge = doc.querySelector('.doc-headline > .grade, .doc-headline .neo-gauge > .grade');
+    const scoreM = doc.querySelector('.dh-tx > b');
+    if (badge && scoreM) {
+      const scoreNum = parseInt((scoreM.textContent.match(/综合\s*(\d+)\s*分/) || [])[1], 10);
+      if (!isNaN(scoreNum)) {
+        const g = gradeFromScore(scoreNum);
+        badge.className = 'grade grade-' + g;
+        badge.textContent = g;
+        scoreM.textContent = `综合 ${scoreNum} 分 · 整体评级 ${g} 级`;
+      }
+    }
+    const lead = doc.querySelector('.doc-lead');
+    if (lead) lead.textContent = OVERALL_SUM;
+    const verdictSpan = doc.querySelector('.doc-headline .dh-tx > span');
+    if (verdictSpan) verdictSpan.remove();
+    const sec = doc.querySelector('.doc-sec');
+    if (sec) { const p2 = sec.querySelectorAll('p')[1]; if (p2) p2.remove(); }
+
+    /* 分维度得分条：每一行的 <em> 等级字母同样按新三级重算 */
+    doc.querySelectorAll('.dim-bar').forEach(bar => {
+      const b = bar.querySelector('.sc > b'), em = bar.querySelector('.sc > em');
+      if (!b || !em) return;
+      const s = parseInt(b.textContent, 10);
+      if (isNaN(s)) return;
+      const g = gradeFromScore(s);
+      em.className = 'grade-' + g;
+      em.textContent = g;
+    });
+
+    /* 分维度详细卡片：等级徽章按新三级重算，定性总结换成新写文案（先于 slimReport 移除 .db-g 之前处理）
+       用维度名文字反查 dim id（DIM_NAME_TO_ID 由 js/mock.js 的 DIMS 生成），不依赖内联颜色字符串 */
+    doc.querySelectorAll('.dim-block').forEach(card => {
+      const nameEl = card.querySelector('.card-head > b');
+      const dimId = nameEl ? DIM_NAME_TO_ID[nameEl.textContent.trim()] : null;
+      const g = card.querySelector('.db-g');
+      const q = card.querySelector('.db-q');
+      let scoreNum = NaN;
+      if (q) scoreNum = parseInt((q.textContent.match(/(\d+)\s*分/) || [])[1], 10);
+      if (g && !isNaN(scoreNum)) {
+        const nl = gradeFromScore(scoreNum);
+        g.className = 'grade ' + gradeClsLocal(nl) + ' db-g';
+        g.textContent = nl;
+      }
+      const sumP = card.querySelector('.db-sum p');
+      if (sumP && dimId && DIM_SUM[dimId]) sumP.textContent = DIM_SUM[dimId];
+    });
+  });
+}
+const gradeClsLocal = g => 'grade-' + String(g || 'B').replace('+', '').replace('-', '');
+const DIM_NAME_TO_ID = (typeof DIMS !== 'undefined' ? DIMS : []).reduce((m, d) => (m[d.name] = d.id, m), {});
+
 function noFix(root) {
   /* 报告：分维度里的「建议：…」与合规里的「整改建议：…」 */
   root.querySelectorAll('.di-fix, .cmp-fix').forEach(n => n.remove());
@@ -213,11 +289,7 @@ function slimReport(root) {
 
     /* 二、三：「本次共评估 N 个维度…」「共 N 部分，点下方标签切换查看」这类话不用写出来 */
     doc.querySelectorAll('.doc-note').forEach(n => n.remove());
-    /* tab 上的副标题，以及 tab 下与 tab 同名的小节标题 */
-    doc.querySelectorAll('.rtab .rt-main em, .rpanel > .doc-h3').forEach(n => n.remove());
-    /* 只剩一个部分时不用摆 tab：「三 详细评估」这个标题就够了 */
-    if (doc.querySelectorAll('.rtab').length < 2)
-      doc.querySelectorAll('.rtabs-wrap').forEach(n => n.remove());
+    /* 「三 详细评估」已去 tab 化（见 flattenTabs）：不再摘 .doc-h3，标签栏统一交给那边处理 */
     /* 平台优化建议属于改法建议 */
     doc.querySelectorAll('.pf-tip').forEach(n => n.remove());
 
@@ -238,9 +310,10 @@ function slimReport(root) {
       .replace(/（2026-08[^）]*）/, '')
       .replace(/\s+/g, ' ').trim();
 
-    /* 分维度：一行里同时给等级、质量评级、分数与严重度分布，留分数与问题数就够 */
+    /* 分维度：一行里同时给等级、质量评级、分数与严重度分布；等级徽章（.db-g）现在由 gradeReport
+       按新三级标准重算后保留展示，这里只去掉「质量评级...·」前缀文字与严重度分布图标 */
     doc.querySelectorAll('.dim-block > .card-head').forEach(hd => {
-      hd.querySelectorAll('.db-g, .sev').forEach(n => n.remove());
+      hd.querySelectorAll('.sev').forEach(n => n.remove());
       const q = hd.querySelector('.db-q');
       if (q) q.textContent = q.textContent.replace(/^\s*质量评级[^·]*·\s*/, '');
     });
@@ -585,7 +658,7 @@ function resSlim(root) {
 }
 
 function watchReports() {
-  const tick = () => { shareBox(document); noFix(document); slimReport(document); chatSkin(document);
+  const tick = () => { shareBox(document); noFix(document); gradeReport(document); slimReport(document); chatSkin(document);
     depthPick(document); resEntry(document); resSlim(document); pwClose(); };
   embedTrim();
   chatHead();
