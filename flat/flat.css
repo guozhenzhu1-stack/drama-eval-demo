@@ -708,6 +708,11 @@ mark.iss.iss-static:hover, mark.iss.iss-static.focus { box-shadow: none; outline
 .iss-card.no-jump { cursor: default; }
 .iss-card.no-jump:hover { box-shadow: none; background: none; }
 
+/* 去掉分集问题标注里按维度上色的小圆点：维度筛选胶囊 + 问题分组标题各一个。
+   sev-dots（P0/P1 严重度圆点）是 .sev-dots i，不在此选择器内，保留不动 */
+.annot #dimFilter .chip .dot,
+.annot .issue-col .dim-group .dg-head .dot { display: none !important; }
+
 /* ================================================================
    22. 快速评估报告：像文件附件一样的一行卡片 + 右侧工作台关闭按钮
    默认已经在右栏摊开报告；用户点 pw-x 收起后，对话里这张卡片可以再摊开一次
