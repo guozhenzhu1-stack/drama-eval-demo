@@ -121,6 +121,9 @@ function shareBox(root) {
     bar.dataset.flatSh = '1';
     ex.forEach(n => n.remove());
   });
+  /* 分集列表底部「示例数据仅解析前 N 集」提示摘掉——annot.js 每次 render 会重建 #epList，
+     所以不打持久标记，靠 tick 每轮把新出现的这条直接子级 .hint-inline 再删一次 */
+  root.querySelectorAll('.ep-list > .hint-inline').forEach(n => n.remove());
 }
 
 /* 点别处收起分享气泡 */
