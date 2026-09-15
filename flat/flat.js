@@ -160,25 +160,28 @@ function gradeReport(root) {
   root.querySelectorAll('.rep-doc:not([data-flat-grade])').forEach(doc => {
     doc.dataset.flatGrade = '1';
 
-    /* 整体：评级卡上的大字母 + 「整体评级 X 级」文字 + 结论段替换成新写的一段话
-       neo.js 的 gauge() 会在 .grade 外面再包一层 .neo-gauge 环形进度条，选择器要能兼容包了一层的情况 */
-    const badge = doc.querySelector('.doc-headline > .grade, .doc-headline .neo-gauge > .grade');
+    /* 顶部评级圆环整块去掉（.doc-headline 由 flat.css 隐藏）：评级与评分改成
+       「总评结论」标题下单独加粗的一行。先从 .dh-tx 文本里读出分数（headline 虽被
+       隐藏，文本还在 DOM 上），按新三级标准算出评级 */
     const scoreM = doc.querySelector('.dh-tx > b');
-    if (badge && scoreM) {
-      const scoreNum = parseInt((scoreM.textContent.match(/综合\s*(\d+)\s*分/) || [])[1], 10);
-      if (!isNaN(scoreNum)) {
-        const g = gradeFromScore(scoreNum);
-        badge.className = 'grade grade-' + g;
-        badge.textContent = g;
-      }
-    }
+    const scoreNum = scoreM ? parseInt((scoreM.textContent.match(/综合\s*(\d+)\s*分/) || [])[1], 10) : NaN;
+    const overallGrade = isNaN(scoreNum) ? '' : gradeFromScore(scoreNum);
+
     const lead = doc.querySelector('.doc-lead');
     if (lead) lead.textContent = OVERALL_SUM;
-    /* 顶部评分/评级简化：只保留左侧仪表盘圆（大字母 + 分数）。右侧「综合 X 分 ·
-       整体评级 X 级」文字行连同评级判词整块（.dh-tx）由 flat.css 隐藏，不在这里删——
-       neo.js 的 gauge() 要读 .dh-tx 里的「综合 X 分」算分，删掉会和它的时序打架 */
     const sec = doc.querySelector('.doc-sec');
-    if (sec) { const p2 = sec.querySelectorAll('p')[1]; if (p2) p2.remove(); }
+    if (sec) {
+      const p2 = sec.querySelectorAll('p')[1]; if (p2) p2.remove();
+      /* 评级 + 评分单独加粗一行，放在「总评结论」标题下、结论正文之前 */
+      if (overallGrade && !sec.querySelector('.rep-grade')) {
+        const gl = document.createElement('div');
+        gl.className = 'rep-grade';
+        gl.innerHTML = `<b>综合评级 ${overallGrade} 级 · ${scoreNum} 分</b>`;
+        const h2 = sec.querySelector('h2');
+        if (h2) h2.insertAdjacentElement('afterend', gl);
+        else sec.prepend(gl);
+      }
+    }
 
     /* 分维度得分条：每一行的 <em> 等级字母同样按新三级重算 */
     doc.querySelectorAll('.dim-bar').forEach(bar => {
@@ -343,7 +346,7 @@ function slimReport(root) {
     const sec = doc.querySelector('.doc-sec');
     if (sec) {
       const h2 = sec.querySelector('h2');
-      if (h2) h2.innerHTML = '<i>一</i>评估结论';
+      if (h2) h2.innerHTML = '<i>一</i>总评结论';
       sec.querySelectorAll('h3').forEach(h => {
         let n = h.nextElementSibling;
         while (n && n.tagName === 'P') { const x = n.nextElementSibling; n.remove(); n = x; }
