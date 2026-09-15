@@ -114,14 +114,12 @@ function shareBox(root) {
     box.dataset.flatSh = '1';
     box.remove();
   });
-  /* 分集问题标注：导出 Word / 导出 Excel 换成同一个分享按钮 */
+  /* 分集问题标注：本期不提供分享/导出入口，导出 Word / 导出 Excel 直接摘掉，也不换成分享按钮 */
   root.querySelectorAll('.annot-bar:not([data-flat-sh])').forEach(bar => {
     const ex = bar.querySelectorAll('[data-ex]');
     if (!ex.length) return;
     bar.dataset.flatSh = '1';
     ex.forEach(n => n.remove());
-    bar.insertAdjacentHTML('beforeend', shareBtn('annot'));
-    bindShare(bar);
   });
 }
 

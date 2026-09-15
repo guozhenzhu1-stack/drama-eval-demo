@@ -267,7 +267,14 @@ function showResult() {
   $('#panelReport').innerHTML = '';
   renderReport($('#panelReport'), SCRIPT, repOpts());   /* 只产出对话里的结果摘要条 */
   /* canFix: false —— 本期只做检测：标注里不出修改建议，也不出一键修复 */
-  annot = createAnnot($('#panelAnnot'), SCRIPT, {
+  /* 分集问题标注也只展示 P0/P1：给 createAnnot 喂一份按 isMajor 过滤过 issues 的 SCRIPT 克隆。
+     episode 其余字段（no/title/blocks/words 等）用浅拷贝原样保留；issues 只保留引用，
+     所以 annot 里忽略/恢复仍写回同一批问题对象，updateCounters 的口径不受影响 */
+  const majorScript = {
+    ...SCRIPT,
+    episodes: SCRIPT.episodes.map(e => ({ ...e, issues: e.issues.filter(isMajor) }))
+  };
+  annot = createAnnot($('#panelAnnot'), majorScript, {
     canFix: false, dims: CHOSEN.dims, onChange: updateCounters
   });
   updateCounters();
