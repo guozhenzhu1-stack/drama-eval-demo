@@ -213,6 +213,57 @@ function gradeReport(root) {
 const gradeClsLocal = g => 'grade-' + String(g || 'B').replace('+', '').replace('-', '');
 const DIM_NAME_TO_ID = (typeof DIMS !== 'undefined' ? DIMS : []).reduce((m, d) => (m[d.name] = d.id, m), {});
 
+/* ---------- 评估报告：两段式重排 ----------
+   总评结论（评级卡 + 一 评估结论与评级依据，去掉分维度得分条）
+   分维度详细评估（去掉定向投稿匹配度，只留分维度评估卡片）
+   合规性评估搪到报告最下面（doc-foot 之前），独立成收尾一段
+   三块内容原来分散在「二」「三」两个 section 里，risk 面板还要跨 section 搪位，
+   纯 CSS 排不动（.rpanel 与「二」的得分条不在同一层级），所以直接动 DOM 节点 */
+function restructureReport(root) {
+  root.querySelectorAll('.rep-doc:not([data-flat-restruct])').forEach(doc => {
+    doc.dataset.flatRestruct = '1';
+    const page = doc.querySelector('.doc-page');
+    if (!page) return;
+    const foot = page.querySelector('.doc-foot');
+    const secs = [...page.querySelectorAll(':scope > .doc-sec')];
+    const secDims = secs[1];   /* 二 分维度得分 */
+    const secDetail = secs[2]; /* 三 详细评估：定向投稿匹配度 / 合规性评估 / 分维度评估 */
+    if (!secDetail) return;
+
+    /* 总评结论：不需要分维度得分条 */
+    if (secDims) secDims.remove();
+
+    /* 详细评估：定向投稿匹配度整块不要 */
+    const matchPanel = secDetail.querySelector('.rpanel[data-rp="match"]');
+    if (matchPanel) matchPanel.remove();
+
+    /* 合规性评估搪到报告最下面，作为独立一节；跟原来的三级序号（3.x）脱钩，
+       另起一个不带序号的小标题，避免和上面分维度评估的编号混在一起 */
+    const riskPanel = secDetail.querySelector('.rpanel[data-rp="risk"]');
+    if (riskPanel) {
+      const h3 = riskPanel.querySelector(':scope > .doc-h3');
+      if (h3) h3.innerHTML = `<i>四</i>合规性评估${h3.querySelector('em') ? h3.querySelector('em').outerHTML : ''}`;
+      riskPanel.classList.add('rep-tail');
+      if (foot) foot.insertAdjacentElement('beforebegin', riskPanel);
+      else page.appendChild(riskPanel);
+    }
+
+    /* 分维度评估留在「三」里，标题不用再说「三」（前面的匹配度/合规已经搬走或消失） */
+    const h2 = secDetail.querySelector(':scope > h2');
+    if (h2) h2.innerHTML = '<i>二</i>分维度详细评估';
+
+    /* dims 面板自己的 <h3><i>3.x</i>分维度评估…</h3> 是旧的三级 tab 编号，
+       现在这个面板是「二」里唯一剩下的内容，h2 已经带了「二」，h3 不需要
+       再重复一层编号，否则会跟 h2 重叠成「二 / 3.3」两套序号 —— 直接摘掉 <i> */
+    const dimsPanel = secDetail.querySelector('.rpanel[data-rp="dims"]');
+    const dimsH3 = dimsPanel ? dimsPanel.querySelector(':scope > .doc-h3') : null;
+    if (dimsH3) {
+      const i = dimsH3.querySelector('i');
+      if (i) i.remove();
+    }
+  });
+}
+
 function noFix(root) {
   /* 报告：分维度里的「建议：…」与合规里的「整改建议：…」 */
   root.querySelectorAll('.di-fix, .cmp-fix').forEach(n => n.remove());
@@ -287,9 +338,11 @@ function slimReport(root) {
       });
     }
 
-    /* 二、三：「本次共评估 N 个维度…」「共 N 部分，点下方标签切换查看」这类话不用写出来 */
+    /* 「本次共评估 N 个维度…」「共 N 部分，点下方标签切换查看」这类话不用写出来 */
     doc.querySelectorAll('.doc-note').forEach(n => n.remove());
-    /* 「三 详细评估」已去 tab 化（见 flattenTabs）：不再摘 .doc-h3，标签栏统一交给那边处理 */
+    /* 详细评估的去 tab 化（标签栏隐藏、.rpanel 顺序摊开）由 flat.css 的 CSS 规则统一处理，
+       两段式重排（去掉分维度得分条 / 匹配度 / 合规搪位）由 restructureReport 处理，
+       这里不再摘 .doc-h3 */
     /* 平台优化建议属于改法建议 */
     doc.querySelectorAll('.pf-tip').forEach(n => n.remove());
 
@@ -658,8 +711,8 @@ function resSlim(root) {
 }
 
 function watchReports() {
-  const tick = () => { shareBox(document); noFix(document); gradeReport(document); slimReport(document); chatSkin(document);
-    depthPick(document); resEntry(document); resSlim(document); pwClose(); };
+  const tick = () => { shareBox(document); noFix(document); gradeReport(document); restructureReport(document);
+    slimReport(document); chatSkin(document); depthPick(document); resEntry(document); resSlim(document); pwClose(); };
   embedTrim();
   chatHead();
   tick();
